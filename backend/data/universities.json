@@ -2,21 +2,51 @@
   {
     "name": "University of Alberta",
     "homepage": "https://www.ualberta.ca",
-    "reason": "Recognized as the top university in Canada and 53rd globally for artificial intelligence by U.S. News."
-  },
-  {
-    "name": "University of Ottawa",
-    "homepage": "https://www.uottawa.ca",
-    "reason": "Ranked among the best universities for computer science in Ontario."
+    "reason": "Ranked #1 in Canada for artificial intelligence research."
   },
   {
     "name": "University of Waterloo",
     "homepage": "https://www.uwaterloo.ca",
-    "reason": "Ranked among the best universities for computer science in Canada."
+    "reason": "Recognized for its strong artificial intelligence and computer science programs."
+  },
+  {
+    "name": "University of Toronto",
+    "homepage": "https://www.utoronto.ca",
+    "reason": "Strong artificial-intelligence research and graduate programs."
+  },
+  {
+    "name": "University of Ottawa",
+    "homepage": "https://www.uottawa.ca",
+    "reason": "Offers graduate programs in artificial intelligence and related fields."
+  },
+  {
+    "name": "York University",
+    "homepage": "https://www.yorku.ca",
+    "reason": "Has a strong computer science department with a focus on artificial intelligence."
   },
   {
     "name": "Queen's University",
     "homepage": "https://www.queensu.ca",
-    "reason": "Mentioned among the best computer science universities in Canada."
+    "reason": "Offers undergraduate and graduate programs in computer science and artificial intelligence."
+  },
+  {
+    "name": "University of Guelph",
+    "homepage": "https://www.uoguelph.ca",
+    "reason": "Has a strong computer science department with research focus on artificial intelligence."
+  },
+  {
+    "name": "Western University",
+    "homepage": "https://www.uwo.ca",
+    "reason": "Offers undergraduate and graduate programs in computer science and artificial intelligence."
+  },
+  {
+    "name": "Carleton University",
+    "homepage": "https://www.carleton.ca",
+    "reason": "Has a strong computer science department with research focus on artificial intelligence."
+  },
+  {
+    "name": "McMaster University",
+    "homepage": "https://www.mcmaster.ca",
+    "reason": "Offers undergraduate and graduate programs in computer science and artificial intelligence."
   }
 ]

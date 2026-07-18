@@ -5,13 +5,13 @@ universities worth targeting for a given research field.
 """
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import json
-from utils.search import search_web
-from utils.llm_client import llm_json
-from config import COUNTRY, PRIORITY_REGION, FIELD, MAX_UNIVERSITIES, UNIVERSITIES_CACHE
-from utils.scraper import fetch_page_text
+from backend.utils.search import search_web
+from backend.utils.llm_client import llm_json
+from backend.config import COUNTRY, PRIORITY_REGION, FIELD, MAX_UNIVERSITIES, UNIVERSITIES_CACHE
+from backend.utils.scraper import fetch_page_text
 
 
 def _search_queries(country: str, region: str, field: str) -> list[str]:
@@ -19,7 +19,7 @@ def _search_queries(country: str, region: str, field: str) -> list[str]:
     return [
         f"best universities in {region}, {country} for {field} graduate program",
         f"top {field} research universities {country}",
-        f"{region} {country} universities computer science graduate ranking",
+        f"{region} {country} universities {field} graduate ranking",
         f"universities in {country} strong {field} research groups",
     ]
 
@@ -30,6 +30,16 @@ def _verify_universities(universities: list[dict]) -> list[dict]:
     """
 
     verified = []
+
+    institutional_signals = (
+        "university",
+        "graduate",
+        "admissions",
+        "faculty",
+        "research",
+        "campus",
+        "student",
+    )
 
     for uni in universities:
 
@@ -46,9 +56,10 @@ def _verify_universities(universities: list[dict]) -> list[dict]:
             )
             continue
 
-        if "university" not in page_text.lower():
+        text = page_text.lower()
+        if not any(signal in text for signal in institutional_signals):
             print(
-                f"[university_finder] skipping non-university site: {homepage}"
+                f"[university_finder] skipping site without institutional signals: {homepage}"
             )
             continue
 

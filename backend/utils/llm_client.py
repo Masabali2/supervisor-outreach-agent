@@ -5,7 +5,7 @@ Get a free key at https://console.groq.com/keys and set:
 """
 import json
 from groq import Groq
-from config import GROQ_API_KEY, GROQ_MODEL
+from backend.config import GROQ_API_KEY, GROQ_MODEL
 
 _client = None
 
@@ -76,7 +76,7 @@ def llm_chat(system_prompt: str, user_prompt: str, temperature: float = 0.4) -> 
     return resp.choices[0].message.content.strip()
 
 
-def llm_json(system_prompt: str, user_prompt: str, temperature: float = 0.2) -> dict | list:
+def llm_json(system_prompt: str, user_prompt: str, temperature: float = 0.1) -> dict | list:
     """
     Structured completion — forces the model to return ONLY valid JSON.
     Raises json.JSONDecodeError if the model still misbehaves (rare with this prompt style).
