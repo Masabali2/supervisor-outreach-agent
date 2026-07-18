@@ -69,6 +69,7 @@ def fetch_page_text(url: str, timeout: int = 15) -> str:
 
         text = trafilatura.extract(
             downloaded,
+            url=url,
             include_links=True,
             include_tables=True,
         )
@@ -83,6 +84,7 @@ def fetch_page_text(url: str, timeout: int = 15) -> str:
 
         try:
             from bs4 import BeautifulSoup
+            from urllib.parse import urljoin
 
             soup = BeautifulSoup(
                 downloaded,
@@ -98,6 +100,11 @@ def fetch_page_text(url: str, timeout: int = 15) -> str:
                 ]
             ):
                 tag.decompose()
+            for a_tag in soup.find_all("a", href=True):
+                absolute_href = urljoin(url, a_tag["href"])
+                a_tag["href"] = absolute_href
+                if a_tag.string:
+                    a_tag.string.replace_with(f"{a_tag.string} ({absolute_href})")
 
             return " ".join(soup.stripped_strings)
 

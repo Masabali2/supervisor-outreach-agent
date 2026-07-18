@@ -12,8 +12,10 @@ GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 COUNTRY = os.getenv("COUNTRY", "Canada")
 PRIORITY_REGION = os.getenv("PRIORITY_REGION", "")
 FIELD = os.getenv("FIELD", "Artificial Intelligence")
-MAX_UNIVERSITIES = int(os.getenv("MAX_UNIVERSITIES", "10"))
+MAX_UNIVERSITIES = int(os.getenv("MAX_UNIVERSITIES", "20"))
 
+SEARCH_DELAY_SECONDS = 2.0
+MAX_FACULTY_PER_UNIVERSITY = int(os.getenv("MAX_FACULTY_PER_UNIVERSITY", "5"))
 UNIVERSITIES_CACHE = str(BASE_DIR / "data" / "universities.json")
 FACULTY_CACHE = str(BASE_DIR / "data" / "faculty.json")
 RANKED_FACULTY_CACHE = str(BASE_DIR / "data" / "ranked_faculty.json")

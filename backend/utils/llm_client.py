@@ -53,11 +53,18 @@ def _parse_json(text: str) -> dict | list:
     ]
 
     if not starts:
-        raise
+        raise json.JSONDecodeError(
+            "No JSON object/array found in LLM response", candidate, 0
+        )
 
     decoder = json.JSONDecoder()
 
-    obj, _ = decoder.raw_decode(candidate[min(starts):])
+    try:
+        obj, _ = decoder.raw_decode(candidate[min(starts):])
+    except json.JSONDecodeError as e:
+        raise json.JSONDecodeError(
+            f"Failed to decode JSON: {e}", candidate, 0
+        )
 
     return obj
 

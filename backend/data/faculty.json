@@ -1,104 +1,16 @@
 [
   {
-    "name": "Shinichi Nakagawa",
-    "university": "University of Alberta",
-    "profile_url": "https://apps.ualberta.ca/directory/person/snakagaw",
-    "research_snippet": "Since 2024, Shinichi has been the Canada Excellence Research Chair in Open Science and Synthesis in Ecology and Evolution (Professor of Evolutionary Ecology and Synthesis)."
+    "name": "Ishtiaque Ahmed",
+    "profile_url": "https://www.ishtiaque.net/",
+    "research_snippet": "Research Areas: human-computer interaction, ICTD Research Interests: computing for marginalized communities, critical computing, social justice, sustainability",
+    "accepting_students_signal": "unclear",
+    "university": "University of Toronto"
   },
   {
-    "name": "Kambiz Moez",
-    "university": "University of Alberta",
-    "profile_url": "https://www.ece.ualberta.ca/~kambiz/",
-    "research_snippet": "• Alireza Saberkari, Research Associate/Visiting Professor, Nov 2018 - Oct 2019 • Ali Basaligheh, Ph.D. Student, Sep 2015 - Sep 2019 (Co-supervised by Prof. Filanovsky)"
-  },
-  {
-    "name": "David Deephouse",
-    "university": "University of Alberta",
-    "profile_url": "https://apps.ualberta.ca/directory/person/davidd",
-    "research_snippet": "Contact Professor, Alberta School of Business - Department of Strategy, Entrepreneurship and Management Email davidd@ualberta.ca Address Business Building 11203 Saskatchewan Drive NW Edmonton AB"
-  },
-  {
-    "name": "Simaan Abourizk",
-    "university": "University of Alberta",
-    "profile_url": "https://apps.ualberta.ca/directory/person/abourizk",
-    "research_snippet": "Professor in Construction Engineering and Management, University of Alberta NSERC/Alberta Construction Industry Research Chair (Jan. 1, 1997 to Jan. 1, 2011) Canada Research Chair in Operations Simulation (July 1, 2001 to July 1, 2008) Executive Board member, Construction Research Institute of Canada Recent Academic Honours and Awards"
-  },
-  {
-    "name": "Physics and Astronomy",
-    "university": "University of Waterloo",
-    "profile_url": "https://uwaterloo.ca/physics-astronomy/profile/strickla",
-    "research_snippet": "Donna Strickland is a professor in the Department of Physics and Astronomy at the University of Waterloo and is one of the recipients of the Nobel Prize in Physics 2018 for developing chirped pulse amplification with Gérard Mourou, her PhD supervisor at the time."
-  },
-  {
-    "name": "Linda Nazar",
-    "university": "University of Waterloo",
-    "profile_url": "https://uwaterloo.ca/chemistry/profile/lfnazar",
-    "research_snippet": "Professor Nazar holds the Canada Research Chair in Solid State Energy Materials since 2004, and is a Fellow of the Royal Society (UK) in recognition of her excellence in research. She is also a Fellow of the Royal Society of Canada, and an Officer of the Order of Canada."
-  },
-  {
-    "name": "Trevor Charles",
-    "university": "University of Waterloo",
-    "profile_url": "https://uwaterloo.ca/biology/profile/tcharles",
-    "research_snippet": "Dr. Trevor Charles is a Professor in the Department of Biology and a microbiologist whose work applies bacterial genetics to the study of bacteria in both pure culture and environmental..."
-  },
-  {
-    "name": "Our professors",
-    "university": "University of Ottawa",
-    "profile_url": "https://www.uottawa.ca/faculty-education/our-professors",
-    "research_snippet": "As leaders in their fields, our professors are engaged in world-class teaching and research focused on making a difference.Find a professor"
-  },
-  {
-    "name": "Shervin Shirmohammadi's web page",
-    "university": "University of Ottawa",
-    "profile_url": "https://www.site.uottawa.ca/~shervin/",
-    "research_snippet": "Shervin Shirmohammadi, IEEE Fellow, SM-ACM, Ph.D., P.Eng. Director of DISCOVER Lab Professor (short bio) School of Electrical Engineering and Computer Science Faculty of Engineering University of Ottawa, Canada See my profile in:"
-  },
-  {
-    "name": "Frithjof Lutscher",
-    "university": "University of Ottawa",
-    "profile_url": "https://www.uottawa.ca/faculty-science/professors/frithjof-lutscher",
-    "research_snippet": "Professor Lutscher is professor of applied mathematics and mathematical biology. He joined the University of Ottawa in 2005 after a PIMS postdoctoral fellowship at the Universities of Alberta and Calgary."
-  },
-  {
-    "name": "Hassan Qudrat",
-    "university": "York University",
-    "profile_url": "https://profiles.laps.yorku.ca/profiles/hassanq/",
-    "research_snippet": "Professor Coordinator Certificate in Logistics Management Editor-in-Chief of International Journal of Complexity in Applied Science and Technology Office: Atkinson College, 263 Phone: 416-736-2100 Ext: 33849 Email: hassanq@yorku.ca Media Requests Welcome Accepting New Graduate Students"
-  },
-  {
-    "name": "Anna M Agathangelou",
-    "university": "York University",
-    "profile_url": "https://profiles.laps.yorku.ca/profiles/agathang/",
-    "research_snippet": "Professor Agathangelou teaches in the areas of international relations and women and politics. Some of her areas of expertise are time and temporality in global politics, the body, time and ecology, international feminist political economy and feminist/postcolonial and decolonial thought."
-  },
-  {
-    "name": "Selim Topaloglu",
-    "university": "Queen's University",
-    "profile_url": "https://smith.queensu.ca/faculty_and_research/faculty_list/topaloglu-selim.php",
-    "research_snippet": "Selim Topaloglu is an Associate Professor and RBC Fellow of Finance at Smith School of Business. He holds a PhD in Finance from Arizona State University."
-  },
-  {
-    "name": "Alejandro Marangoni",
-    "university": "University of Guelph",
-    "profile_url": "https://www.uoguelph.ca/foodscience/people/alejandro-marangoni",
-    "research_snippet": "Alejandro Marangoni is a professor and Tier I Canada Research Chair in Food, Health and Aging at the University of Guelph. He was inspired to pursue a career in chemistry by a teacher at the Lester B. Pearson College of the Pacific, which he attended prior to pursuing his Bachelor of Science in Agricultural Chemistry."
-  },
-  {
-    "name": "Scott Weese",
-    "university": "University of Guelph",
-    "profile_url": "https://www.uoguelph.ca/ovc/pathobiology/people/faculty/scott-weese",
-    "research_snippet": "Scott Weese Professor Ontario Veterinary College, Department of Pathobiology jsweese@uoguelph.ca (519) 824-4120, Ext. 54064 OVC Mona Campbell Centre for Animal Cancer, Room 1139, Lab 1117 and 1126"
-  },
-  {
-    "name": "Our People",
-    "university": "University of Guelph",
-    "profile_url": "https://www.uoguelph.ca/mcb/people",
-    "research_snippet": "Discover excellence at the University of Guelph - a leading institution fostering innovation, world-class research, and personalized learning. Explore our diverse academic programs, cutting-edge facilities, and vibrant campus life. Join a community dedicated to shaping the future."
-  },
-  {
-    "name": "Academic Ranks",
-    "university": "Carleton University",
-    "profile_url": "https://carleton.ca/deputyprovost/faculty-affairs/ranks/",
-    "research_snippet": "In accordance with the Carleton policy, Honourary and Affiliated Ranks, this permanent title is automatically conferred upon a full professor upon retirement in recognition and celebration of his/her accomplishments and contributions during his/her career at the University."
+    "name": "Jimmy Ba",
+    "profile_url": "https://jimmylba.github.io/",
+    "research_snippet": "Research Areas: machine learning Research Interests: deep learning, neural networks, deep reinforcement learning, optimization",
+    "accepting_students_signal": "unclear",
+    "university": "University of Toronto"
   }
 ]

@@ -79,7 +79,7 @@ def discover_universities(country: str = COUNTRY,
     """
     all_snippets = []
     for q in _search_queries(country, region, field):
-        results = search_web(q, max_results=4)
+        results = search_web(q, max_results=20)
         for r in results:
             title = r.get("title", "")[:120]
             url = r.get("url", "")

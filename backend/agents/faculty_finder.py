@@ -1,204 +1,226 @@
-"""Stage 1: discover faculty profiles from Stage 0 university results.
-
-This module deliberately uses search results as candidates only.  Stage 2 is
-responsible for visiting a candidate profile and enriching its information.
 """
-
-from __future__ import annotations
-
-import argparse
+Stage 1 — Faculty Discovery Agent
+Given a university, finds professors working in the target field, and tries
+to detect signals that they are actively accepting graduate students.
+"""
 import json
-import logging
-import re
-from pathlib import Path
-from typing import Any, Callable, Iterable
-from urllib.parse import urlparse
-
-LOGGER = logging.getLogger(__name__)
-
-SearchClient = Callable[[str, int], Iterable[dict[str, Any]]]
+import os
+import time
+from urllib.parse import urljoin, urlparse
+from backend.utils.search import search_web
+from backend.utils.scraper import fetch_page_text
+from backend.utils.llm_client import llm_json
+from backend.config import FIELD, MAX_FACULTY_PER_UNIVERSITY, FACULTY_CACHE, SEARCH_DELAY_SECONDS
 
 
-def load_universities(input_path: str | Path) -> list[dict[str, str]]:
-    """Load and minimally validate Stage 0's universities JSON output."""
-    path = Path(input_path)
-    with path.open(encoding="utf-8") as file:
-        universities = json.load(file)
-
-    if not isinstance(universities, list):
-        raise ValueError("universities.json must contain a JSON array.")
-
-    valid_universities = []
-    for university in universities:
-        if not isinstance(university, dict):
-            LOGGER.warning("Skipping malformed university entry: %r", university)
-            continue
-        if university.get("name") and university.get("homepage"):
-            valid_universities.append(university)
-        else:
-            LOGGER.warning("Skipping university without name or homepage: %r", university)
-    return valid_universities
-
-
-def university_domain(homepage: str) -> str:
-    """Return the hostname used to constrain searches to an institution."""
-    parsed = urlparse(homepage if "://" in homepage else f"https://{homepage}")
-    return parsed.netloc.lower().removeprefix("www.")
-
-
-def build_search_query(university: dict[str, str], research_field: str) -> str:
-    """Build a domain-restricted query for professor profile pages."""
-    domain = university_domain(university["homepage"])
-    # Search engines handle a focused term more reliably than ``professor OR
-    # faculty`` and return individual profile pages instead of broad faculty
-    # directories.
-    terms = [f"site:{domain}", "professor"]
-    if research_field.strip():
-        terms.append(f'"{research_field.strip()}"')
-    return " ".join(terms)
-
-
-def ddg_search(query: str, max_results: int) -> Iterable[dict[str, Any]]:
-    """Search one provider at a time and fall back when one times out."""
-    try:
-        from ddgs import DDGS
-    except ImportError as error:
-        raise RuntimeError(
-            "DuckDuckGo search requires the 'ddgs' package. "
-            "Install it or provide a search_client to discover_faculty()."
-        ) from error
-
-    errors: list[str] = []
-    for backend in ("google", "yahoo", "bing", "mojeek"):
-        try:
-            results = DDGS().text(
-                query,
-                max_results=max_results,
-                backend=backend,
-            )
-            if results:
-                return results
-        except Exception as error:
-            errors.append(f"{backend}: {error}")
-            LOGGER.info("Search provider %s failed: %s", backend, error)
-
-    raise RuntimeError("All faculty search providers failed. " + "; ".join(errors))
-
-
-def is_on_university_domain(url: str, domain: str) -> bool:
-    """Allow the university host and its subdomains, but not lookalike hosts."""
-    host = urlparse(url).netloc.lower().split(":")[0].removeprefix("www.")
-    return host == domain or host.endswith(f".{domain}")
-
-
-def extract_name(title: str) -> str:
-    """Extract the likely faculty name from a conventional search-result title."""
-    candidate = re.split(r"\s*(?:\||[-–—]|:|,\s*(?:PhD|Professor))\s*", title, maxsplit=1)[0]
-    candidate = re.sub(r"^(?:dr\.?|prof\.?|professor)\s+", "", candidate, flags=re.I)
-    candidate = re.sub(r"\s+", " ", candidate).strip()
-    words = candidate.split()
-    non_person_terms = {
-        "about", "college", "department", "faculty", "graduate", "lab",
-        "research", "school", "science", "staff", "university",
-    }
-    if any(word.casefold().strip(".,") in non_person_terms for word in words):
-        return ""
-    if 2 <= len(words) <= 6 and all(re.search(r"[A-Za-z]", word) for word in words):
-        return candidate
-    return ""
-
-
-def looks_like_person_profile(title: str, profile_url: str) -> bool:
-    """Reject research-area and institute pages returned by broad web searches."""
-    if re.match(r"\s*(?:dr\.?|prof\.?|professor)\b", title, flags=re.I):
-        return True
-
-    path = urlparse(profile_url).path.casefold()
-    person_path_terms = ("people", "person", "faculty", "profile", "staff", "member", "bio")
-    return any(term in path for term in person_path_terms)
-
-
-def faculty_from_result(
-    result: dict[str, Any], university_name: str, domain: str
-) -> dict[str, str] | None:
-    """Turn one domain-valid search result into the Stage 1 data contract."""
-    profile_url = str(result.get("href") or result.get("url") or "").strip()
-    title = str(result.get("title") or "").strip()
-    snippet = str(result.get("body") or result.get("snippet") or "").strip()
-    if not profile_url or not is_on_university_domain(profile_url, domain):
-        return None
-    if not looks_like_person_profile(title, profile_url):
-        return None
-
-    name = extract_name(title)
-    if not name:
-        return None
-
-    return {
-        "name": name,
-        "university": university_name,
-        "profile_url": profile_url,
-        "research_snippet": snippet,
-    }
-
-
-def discover_faculty(
-    input_path: str | Path,
-    output_path: str | Path,
-    research_field: str = "",
-    max_results_per_university: int = 10,
-    search_client: SearchClient | None = None,
-) -> list[dict[str, str]]:
-    """Run Stage 1 and save its deduplicated faculty results to ``output_path``.
-
-    Individual university search failures are logged and do not stop the stage.
-    ``search_client`` makes the function independently testable and lets the
-    backend provide another search service in the future.
+def _normalize_profile_url(profile_url: str, university_homepage: str) -> tuple[str, str]:
     """
-    if max_results_per_university < 1:
-        raise ValueError("max_results_per_university must be at least 1.")
+    Cleans up the LLM-extracted profile_url. Returns (clean_url, extracted_email).
 
-    search = search_client or ddg_search
-    faculty: list[dict[str, str]] = []
-    seen: set[tuple[str, str]] = set()
+    Handles two common issues seen in raw output:
+    1. Relative URLs like "/people/Salimur/Choudhury" (missing the domain) —
+       these get resolved against the university's homepage into a full URL.
+    2. "mailto:someone@school.edu" links that the LLM mistakenly put in
+       profile_url instead of an email field — these get extracted out as an
+       email and profile_url is cleared (since it isn't actually a profile page).
+    """
+    if not profile_url or not isinstance(profile_url, str):
+        return "", ""
 
-    for university in load_universities(input_path):
-        domain = university_domain(university["homepage"])
-        if not domain:
-            LOGGER.warning("Skipping university with invalid homepage: %s", university["name"])
-            continue
+    profile_url = profile_url.strip()
+
+    if profile_url.lower().startswith("mailto:"):
+        return "", profile_url[len("mailto:"):].strip()
+
+    if profile_url.startswith("/") and university_homepage:
+        return urljoin(university_homepage, profile_url), ""
+
+    parsed = urlparse(profile_url)
+    if not parsed.scheme or not parsed.netloc:
+        # Doesn't look like a usable URL at all (e.g. leftover junk text) — drop it
+        return "", ""
+
+    return profile_url, ""
+
+
+def _is_clean_text(text: str, min_printable_ratio: float = 0.85) -> bool:
+    """
+    Detects garbled/binary content that slipped through as 'text' (e.g. a PDF,
+    a compressed file, or a corrupted download that got decoded as if it were
+    plain text). Returns False if too much of the content is non-printable
+    junk — this is what prevents corrupted scraped pages from poisoning the
+    LLM prompt and causing the whole university's extraction to fail.
+    """
+    if not text:
+        return False
+    sample = text[:2000]  # checking a sample is enough and keeps this fast
+    printable = sum(1 for ch in sample if ch.isprintable() or ch in "\n\t\r")
+    ratio = printable / len(sample)
+    return ratio >= min_printable_ratio
+
+
+def _find_faculty_directory(university_name: str, field: str) -> list[dict]:
+    """Search for the department's faculty listing / directory page."""
+    queries = [
+        f"{university_name} {field} faculty directory",
+        f"{university_name} department faculty list {field}",
+        f"{university_name} {field} lab professors graduate students",
+    ]
+    results = []
+    for q in queries:
         try:
-            results = search(build_search_query(university, research_field), max_results_per_university)
-            for result in results:
-                entry = faculty_from_result(result, university["name"], domain)
-                if entry is None:
-                    continue
-                key = (entry["university"].casefold(), entry["profile_url"].rstrip("/").casefold())
-                if key not in seen:
-                    seen.add(key)
-                    faculty.append(entry)
-        except Exception as error:  # A failed university must not stop the pipeline.
-            LOGGER.warning("Faculty discovery failed for %s: %s", university["name"], error)
-
-    output = Path(output_path)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    with output.open("w", encoding="utf-8") as file:
-        json.dump(faculty, file, ensure_ascii=False, indent=2)
-    return faculty
+            results.extend(search_web(q, max_results=6))
+        except Exception as e:
+            print(f"[faculty_finder] Search failed for query '{q}': {e}")
+    return results
 
 
-def main() -> None:
-    """Provide an independently runnable Stage 1 command."""
-    parser = argparse.ArgumentParser(description="Discover university faculty profiles.")
-    parser.add_argument("--input", default="backend/data/universities.json")
-    parser.add_argument("--output", default="backend/data/faculty.json")
-    parser.add_argument("--field", default="", help="Optional research field to target.")
-    parser.add_argument("--max-results", type=int, default=10)
-    args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    faculty = discover_faculty(args.input, args.output, args.field, args.max_results)
-    LOGGER.info("Saved %d faculty candidates to %s", len(faculty), args.output)
+def find_faculty(university: dict, field: str = FIELD,
+                  limit: int = MAX_FACULTY_PER_UNIVERSITY) -> list[dict]:
+    """
+    Returns a list of candidate professors:
+    {"name", "profile_url", "university", "research_snippet", "accepting_students_signal"}
+    """
+    university_name = university.get("name", "")
+    search_results = _find_faculty_directory(university_name, field)
+
+    if not search_results:
+        print(f"[faculty_finder] no search results for {university_name}")
+        return []
+
+    scraped_context = []
+    for r in search_results[:6]:
+        # Try both 'href' and 'url' keys (different search providers use different names)
+        url = (r.get("href") or r.get("url") or "").strip()
+        if not url:
+            continue
+
+        # Keep snippet as a backup fallback
+        snippet = r.get("body") or r.get("snippet") or ""
+
+        try:
+            print(f"[faculty_finder] Attempting to scrape: {url}")
+            text = fetch_page_text(url)
+
+            # Guard 1: enough content? Guard 2: is it actually clean text
+            # (not garbled/binary junk from a PDF or corrupted download)?
+            if text and len(text.strip()) > 300 and _is_clean_text(text):
+                scraped_context.append(f"SOURCE URL: {url}\n{text[:3000]}")
+                print(f"[faculty_finder] Successfully scraped text from {url}")
+            elif text and not _is_clean_text(text):
+                print(f"[faculty_finder] skipping garbled/binary content from {url}")
+                if snippet:
+                    scraped_context.append(f"SOURCE URL (Search Snippet Fallback): {url}\n{snippet}")
+            elif snippet:
+                scraped_context.append(f"SOURCE URL (Search Snippet Fallback): {url}\n{snippet}")
+                print(f"[faculty_finder] Page content empty/blocked. Used search snippet fallback for {url}")
+        except Exception as e:
+            if snippet:
+                scraped_context.append(f"SOURCE URL (Search Snippet Fallback): {url}\n{snippet}")
+            print(f"[faculty_finder] Error scraping {url}: {e}. Used snippet fallback.")
+
+        time.sleep(SEARCH_DELAY_SECONDS)
+
+    if not scraped_context:
+        print(f"[faculty_finder] could not extract any page content or snippets for {university_name}")
+        return []
+
+    combined_text = "\n\n---\n\n".join(scraped_context)
+
+    system_prompt = (
+        "You are a research assistant extracting a structured list of professors "
+        "from raw scraped university web pages. Only include real individual "
+        "faculty members (not generic staff/admin), and only those whose research "
+        "clearly relates to the given field."
+    )
+
+    user_prompt = f"""
+University: {university_name}
+Target field: {field}
+
+Scraped page content (may be messy/partial):
+{combined_text}
+
+Return a JSON array of up to {limit} objects.
+CRITICAL: You must extract the professors even if you cannot find a clear signal about them accepting students. If the text doesn't explicitly mention recruitment, just set "accepting_students_signal" to "unclear".
+
+Each object must contain EXACTLY these keys (no other keys, no different names):
+- "name": professor's full name
+- "profile_url": their personal/lab page URL if found in the text, else ""
+- "research_snippet": 1-2 sentences on what they research, based on the text
+- "accepting_students_signal": true/false/"unclear" — true ONLY if the text explicitly suggests they are looking for students, have open positions, or are actively recruiting
+"""
+    try:
+        faculty = llm_json(system_prompt, user_prompt)
+
+        if not isinstance(faculty, list):
+            print(f"[faculty_finder] LLM did not return a valid list for {university_name}")
+            return []
+
+        # Schema validation: only keep entries that actually match what we asked
+        # for. This is what stops one bad/garbled source from taking down the
+        # entire university's results with a single malformed LLM response
+        # (e.g. the LLM echoing back some unrelated JSON it found in scraped
+        # content instead of following the requested schema).
+        valid_faculty = [
+            f for f in faculty
+            if isinstance(f, dict) and isinstance(f.get("name"), str) and f["name"].strip()
+        ]
+        dropped = len(faculty) - len(valid_faculty)
+        if dropped > 0:
+            print(f"[faculty_finder] dropped {dropped} malformed/mismatched-schema entries for {university_name}")
+
+        # Normalize: make sure every kept entry has all expected keys, even if
+        # the LLM omitted one — downstream stages assume these keys exist.
+        university_homepage = university.get("homepage", "") or university.get("homepage_guess", "")
+        for f in valid_faculty:
+            f.setdefault("profile_url", "")
+            f.setdefault("research_snippet", "")
+            f.setdefault("accepting_students_signal", "unclear")
+            f["university"] = university_name
+
+            # Clean up the profile_url: fix relative paths, pull out mailto: links
+            clean_url, extracted_email = _normalize_profile_url(f["profile_url"], university_homepage)
+            f["profile_url"] = clean_url
+            if extracted_email:
+                f["email"] = extracted_email
+
+        return valid_faculty
+
+    except Exception as e:
+        print(f"[faculty_finder] LLM extraction failed for {university_name}: {e}")
+        return []
+
+
+def find_faculty_for_all(universities: list[dict], field: str = FIELD) -> list[dict]:
+    """Runs find_faculty across a list of universities and caches the combined result."""
+    all_faculty = []
+    for uni in universities:
+        print(f"\n[faculty_finder] searching {uni.get('name')}...")
+        faculty = find_faculty(uni, field=field)
+        if faculty:
+            all_faculty.extend(faculty)
+            print(f"[faculty_finder] Found {len(faculty)} candidate(s) for {uni.get('name')}")
+
+    os.makedirs(os.path.dirname(FACULTY_CACHE), exist_ok=True)
+    with open(FACULTY_CACHE, "w", encoding="utf-8") as f:
+        json.dump(all_faculty, f, indent=2, ensure_ascii=False)
+
+    return all_faculty
 
 
 if __name__ == "__main__":
-    main()
+    input_file_path = "backend/data/universities.json"
+    print(f"[faculty_finder] Reading universities from {input_file_path}...")
+
+    try:
+        with open(input_file_path, "r", encoding="utf-8") as file:
+            universities_list = json.load(file)
+
+        all_discovered_faculty = find_faculty_for_all(universities_list)
+        print(f"\n[Success] Completed! Saved {len(all_discovered_faculty)} professors to cache at: {FACULTY_CACHE}")
+
+    except FileNotFoundError:
+        print(f"[Error] '{input_file_path}' file nahi mili! Pehle check karein ke path sahi hai ya nahi.")
+    except json.JSONDecodeError:
+        print(f"[Error] '{input_file_path}' sahi JSON format mein nahi hai.")

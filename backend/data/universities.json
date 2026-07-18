@@ -1,52 +1,57 @@
 [
   {
-    "name": "University of Alberta",
-    "homepage": "https://www.ualberta.ca",
-    "reason": "Ranked #1 in Canada for artificial intelligence research."
-  },
-  {
-    "name": "University of Waterloo",
-    "homepage": "https://www.uwaterloo.ca",
-    "reason": "Recognized for its strong artificial intelligence and computer science programs."
-  },
-  {
     "name": "University of Toronto",
     "homepage": "https://www.utoronto.ca",
     "reason": "Strong artificial-intelligence research and graduate programs."
   },
   {
+    "name": "University of Waterloo",
+    "homepage": "https://uwaterloo.ca",
+    "reason": "Home to the Waterloo Data and Artificial Intelligence Institute."
+  },
+  {
     "name": "University of Ottawa",
     "homepage": "https://www.uottawa.ca",
-    "reason": "Offers graduate programs in artificial intelligence and related fields."
-  },
-  {
-    "name": "York University",
-    "homepage": "https://www.yorku.ca",
-    "reason": "Has a strong computer science department with a focus on artificial intelligence."
-  },
-  {
-    "name": "Queen's University",
-    "homepage": "https://www.queensu.ca",
-    "reason": "Offers undergraduate and graduate programs in computer science and artificial intelligence."
-  },
-  {
-    "name": "University of Guelph",
-    "homepage": "https://www.uoguelph.ca",
-    "reason": "Has a strong computer science department with research focus on artificial intelligence."
+    "reason": "Offers graduate programs in artificial intelligence."
   },
   {
     "name": "Western University",
     "homepage": "https://www.uwo.ca",
-    "reason": "Offers undergraduate and graduate programs in computer science and artificial intelligence."
+    "reason": "Has a strong research focus on artificial intelligence."
+  },
+  {
+    "name": "Queen's University",
+    "homepage": "https://www.queensu.ca",
+    "reason": "Offers undergraduate and graduate programs in artificial intelligence."
+  },
+  {
+    "name": "York University",
+    "homepage": "https://www.yorku.ca",
+    "reason": "Has a research focus on artificial intelligence and machine learning."
+  },
+  {
+    "name": "University of Alberta",
+    "homepage": "https://www.ualberta.ca",
+    "reason": "Recognized as a top university in Canada for artificial intelligence research."
+  },
+  {
+    "name": "University of British Columbia",
+    "homepage": "https://www.ubc.ca",
+    "reason": "Has a strong research focus on artificial intelligence and machine learning."
   },
   {
     "name": "Carleton University",
-    "homepage": "https://www.carleton.ca",
-    "reason": "Has a strong computer science department with research focus on artificial intelligence."
+    "homepage": "https://carleton.ca",
+    "reason": "Has a research focus on artificial intelligence and data science."
   },
   {
-    "name": "McMaster University",
-    "homepage": "https://www.mcmaster.ca",
-    "reason": "Offers undergraduate and graduate programs in computer science and artificial intelligence."
+    "name": "Ontario Tech University",
+    "homepage": "https://ontariotechu.ca",
+    "reason": "Offers graduate programs in artificial intelligence and machine learning."
+  },
+  {
+    "name": "University of Niagara Falls Canada",
+    "homepage": "https://www.unfc.ca",
+    "reason": "Offers a Master of Computer Science in Applied Artificial Intelligence."
   }
 ]

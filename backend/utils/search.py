@@ -17,11 +17,21 @@ except ImportError:  # Lets agents run safely before project setup is complete.
 
 logger = logging.getLogger(__name__)
 
+BLOCKED_DOMAINS = (
+    "facebook.com", "twitter.com", "x.com", "instagram.com",
+    "tiktok.com", "reddit.com", "pinterest.com", "youtube.com",
+    "groups.google.com", "quora.com","linkedin.com","github.com",
+)
+
 
 def _clean_result(item: dict[str, Any]) -> dict[str, str] | None:
     """Convert a provider result to the shared search-result schema."""
     url = str(item.get("href") or item.get("url") or "").strip()
     if not url.startswith(("http://", "https://")):
+        return None
+
+    # NEW: Drop social media / forum junk domains before scraping
+    if any(blocked in url.lower() for blocked in BLOCKED_DOMAINS):
         return None
 
     return {
