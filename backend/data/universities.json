@@ -1,0 +1,22 @@
+[
+  {
+    "name": "University of Alberta",
+    "homepage": "https://www.ualberta.ca",
+    "reason": "Recognized as the top university in Canada and 53rd globally for artificial intelligence by U.S. News."
+  },
+  {
+    "name": "University of Ottawa",
+    "homepage": "https://www.uottawa.ca",
+    "reason": "Ranked among the best universities for computer science in Ontario."
+  },
+  {
+    "name": "University of Waterloo",
+    "homepage": "https://www.uwaterloo.ca",
+    "reason": "Ranked among the best universities for computer science in Canada."
+  },
+  {
+    "name": "Queen's University",
+    "homepage": "https://www.queensu.ca",
+    "reason": "Mentioned among the best computer science universities in Canada."
+  }
+]
