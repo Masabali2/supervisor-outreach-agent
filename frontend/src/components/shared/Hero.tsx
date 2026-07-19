@@ -1,5 +1,5 @@
 ﻿"use client";
-
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import SearchForm from "@/components/forms/SearchForm";
@@ -12,22 +12,27 @@ const featureHighlights = [
 ];
 
 export default function Hero() {
+
+  const router = useRouter();
   const [isVisible, setIsVisible] = useState(false);
   const heroRef = useRef<HTMLElement>(null);
   const mouseGlowRef = useRef<HTMLDivElement>(null);
 
-  const submitSearch = async (formData: { country: string; region?: string; degree: "Masters" | "PhD"; researchField: string }) => {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000"}/search`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ country: formData.country, region: formData.region ?? "", degree: formData.degree, field: formData.researchField }),
-    });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      throw new Error(payload.detail ?? "The search could not be completed.");
-    }
-    window.location.assign("/results");
-  };
+  const submitSearch = async (formData: {
+  country: string;
+  region?: string;
+  degree: "Masters" | "PhD";
+  researchField: string;
+}) => {
+  const search = new URLSearchParams({
+    country: formData.country,
+    region: formData.region ?? "",
+    degree: formData.degree,
+    field: formData.researchField,
+  });
+
+  router.push(`/loading?${search.toString()}`);
+};
 
   useEffect(() => {
     const animationFrame = window.requestAnimationFrame(() => setIsVisible(true));

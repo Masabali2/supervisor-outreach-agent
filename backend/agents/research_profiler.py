@@ -35,32 +35,20 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     BeautifulSoup = None  # type: ignore[assignment]
 
-try:
-    from groq import Groq
-except ImportError:  # pragma: no cover - optional dependency
-    Groq = None  # type: ignore[assignment]
+from backend.utils.llm_client import llm_json
 
 
 AcceptingSignal = Literal[True, False, "Unknown"]
 
-# Anchored to backend/data/faculty.json regardless of the current working
-# directory, mirroring how ranker.py resolves its own default paths.
-_BACKEND_ROOT = Path(__file__).resolve().parents[1]
-_PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_INPUT_PATH = _BACKEND_ROOT / "data" / "faculty.json"
-DEFAULT_OUTPUT_PATH = _BACKEND_ROOT / "data" / "faculty.json"
-DEFAULT_MODEL = "llama-3.1-8b-instant"
+DEFAULT_DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "faculty.json"
+DEFAULT_INPUT_PATH = DEFAULT_DATA_PATH
+DEFAULT_OUTPUT_PATH = DEFAULT_DATA_PATH
 REQUEST_TIMEOUT_SECONDS = 20
 MAX_PAGE_TEXT_CHARS = 18_000
 USER_AGENT = (
     "Mozilla/5.0 (compatible; SupervisorOutreachAgent/1.0; "
     "+https://example.com/hackathon)"
 )
-# Semantic Scholar's public (unauthenticated) API rate-limits aggressively
-# when called back-to-back for many professors in a row. Spacing requests
-# out and retrying once on a 429 avoids silently losing publication data.
-SEMANTIC_SCHOLAR_MIN_INTERVAL_SECONDS = 3.0
-_last_semantic_scholar_call_time = 0.0
 
 INSTITUTIONAL_EMAIL_SUFFIXES = (
     ".edu",
@@ -74,7 +62,19 @@ INSTITUTIONAL_EMAIL_SUFFIXES = (
     ".ac.in",
 )
 
+# Semantic Scholar's public (unauthenticated) API rate-limits aggressively
+# when called back-to-back for many professors in a row. Spacing requests
+# out and retrying once on a 429 avoids silently losing publication data.
+# An optional free key (https://www.semanticscholar.org/product/api) raises
+# the limit further if set as SEMANTIC_SCHOLAR_API_KEY in .env.
+SEMANTIC_SCHOLAR_MIN_INTERVAL_SECONDS = 5.0
+_last_semantic_scholar_call_time = 0.0
+
 LOGGER = logging.getLogger(__name__)
+
+SUMMARY_SYSTEM_PROMPT = """You create factual research profiles for graduate
+supervisors. Use only the supplied webpage and publication evidence. Return a
+single JSON object, with no Markdown or extra text."""
 
 
 def load_faculty(path: str | Path = DEFAULT_INPUT_PATH) -> list[dict[str, Any]]:
@@ -161,7 +161,13 @@ def profile_researcher(professor: dict[str, Any]) -> dict[str, Any]:
     page_html = fetch_professor_page(profile_url) if profile_url else None
     page_text = extract_clean_text(page_html or "")
 
-    email = extract_email(page_text) or extract_email(page_html or "")
+    # Only overwrite the email if scraping the page actually found one.
+    # Stage 1 (faculty_finder.py) sometimes already found an email via a
+    # mailto: link; without this guard, a professor with no profile_url
+    # (or an unreachable page) would silently lose that existing email.
+    scraped_email = extract_email(page_text) or extract_email(page_html or "")
+    email = scraped_email or enriched.get("email")
+
     publications = find_recent_publications(
         professor_name=str(enriched.get("name") or ""),
         research_field=str(enriched.get("research_snippet") or ""),
@@ -173,6 +179,10 @@ def profile_researcher(professor: dict[str, Any]) -> dict[str, Any]:
         research_snippet=str(enriched.get("research_snippet") or ""),
     )
     accepting_students = detect_accepting_students(page_text, summary)
+    if accepting_students == "Unknown":
+        stage_one_signal = enriched.get("accepting_students_signal")
+        if stage_one_signal in (True, False):
+            accepting_students = stage_one_signal
 
     enriched.update(
         {
@@ -272,6 +282,20 @@ def extract_email(text: str) -> str | None:
     return unique_matches[0] if unique_matches else None
 
 
+def _semantic_scholar_headers() -> dict[str, str]:
+    """Build request headers, including an API key when one is configured.
+
+    A free key from https://www.semanticscholar.org/product/api gets a much
+    higher rate limit than the shared unauthenticated tier.
+    """
+
+    headers = {"User-Agent": USER_AGENT}
+    api_key = os.getenv("SEMANTIC_SCHOLAR_API_KEY", "").strip()
+    if api_key:
+        headers["x-api-key"] = api_key
+    return headers
+
+
 def _fetch_semantic_scholar(
     params: dict[str, Any], professor_name: str
 ) -> dict[str, Any] | None:
@@ -284,6 +308,8 @@ def _fetch_semantic_scholar(
 
     global _last_semantic_scholar_call_time
 
+    headers = _semantic_scholar_headers()
+
     for attempt in range(1, 3):
         elapsed = time.monotonic() - _last_semantic_scholar_call_time
         wait_needed = SEMANTIC_SCHOLAR_MIN_INTERVAL_SECONDS - elapsed
@@ -294,7 +320,7 @@ def _fetch_semantic_scholar(
             response = requests.get(
                 "https://api.semanticscholar.org/graph/v1/paper/search",
                 params=params,
-                headers={"User-Agent": USER_AGENT},
+                headers=headers,
                 timeout=REQUEST_TIMEOUT_SECONDS,
             )
             _last_semantic_scholar_call_time = time.monotonic()
@@ -317,6 +343,12 @@ def _fetch_semantic_scholar(
             LOGGER.warning("Could not fetch publications for %s: %s", professor_name, exc)
             return None
 
+    LOGGER.warning(
+        "Semantic Scholar kept rate-limiting %s; skipping publications. "
+        "A free API key (SEMANTIC_SCHOLAR_API_KEY in .env) fixes this "
+        "reliably: https://www.semanticscholar.org/product/api",
+        professor_name,
+    )
     return None
 
 
@@ -368,32 +400,52 @@ def generate_profile_summary(
     webpage_text: str,
     recent_publications: list[dict[str, Any]] | None = None,
     research_snippet: str = "",
-    model: str | None = None,
 ) -> dict[str, Any]:
-    """Use Groq (LLaMA) to create a structured professor research profile."""
+    """Use the shared Groq client to create a structured research profile."""
 
-    fallback = {
-        "profile_summary": "",
-        "research_areas": [],
-        "recent_work": [],
-    }
+    fallback = _evidence_fallback(research_snippet, recent_publications or [])
     if not webpage_text and not recent_publications and not research_snippet:
         return fallback
 
     prompt = build_summary_prompt(webpage_text, recent_publications or [], research_snippet)
-    raw_response = call_groq_json(prompt, model=model or get_default_model())
-    if raw_response is None:
+    try:
+        parsed = llm_json(SUMMARY_SYSTEM_PROMPT, prompt, temperature=0.1)
+    except Exception as exc:
+        LOGGER.warning("Groq profile summary failed; keeping available evidence: %s", exc)
         return fallback
-
-    parsed = parse_json_object(raw_response)
-    if parsed is None:
-        LOGGER.warning("Groq returned invalid JSON for profile summary.")
+    if not isinstance(parsed, dict):
+        LOGGER.warning("Groq returned a non-object profile summary.")
         return fallback
 
     return {
         "profile_summary": str(parsed.get("profile_summary") or ""),
         "research_areas": _string_list(parsed.get("research_areas")),
         "recent_work": _string_list(parsed.get("recent_work")),
+    }
+
+
+def _evidence_fallback(
+    research_snippet: str, recent_publications: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Keep Stage 2 useful if Groq is unavailable without inventing details."""
+
+    clean_snippet = _normalize_whitespace(research_snippet)
+    publication_titles = [
+        str(publication.get("title")).strip()
+        for publication in recent_publications
+        if isinstance(publication, dict) and publication.get("title")
+    ]
+    if clean_snippet:
+        summary = clean_snippet[:700]
+    elif publication_titles:
+        summary = "Recent publication evidence was found, but no profile-page summary was available."
+    else:
+        summary = "No reliable research-profile evidence was available."
+
+    return {
+        "profile_summary": summary,
+        "research_areas": [],
+        "recent_work": publication_titles[:3],
     }
 
 
@@ -435,7 +487,7 @@ def build_summary_prompt(
     recent_publications: list[dict[str, Any]],
     research_snippet: str,
 ) -> str:
-    """Create the LLM prompt separately so it is easy to test."""
+    """Create the Groq prompt separately so it is easy to test."""
 
     publications_json = json.dumps(recent_publications, ensure_ascii=False, indent=2)
     clipped_text = webpage_text[:MAX_PAGE_TEXT_CHARS]
@@ -464,93 +516,6 @@ Recent publications:
 Professor webpage text:
 {clipped_text}
 """.strip()
-
-
-def call_groq_json(prompt: str, model: str = DEFAULT_MODEL) -> str | None:
-    """Call the Groq chat completions API and return the raw text response."""
-
-    if Groq is None:
-        LOGGER.warning("groq package is not installed; skipping AI summary.")
-        return None
-    if not has_groq_api_key():
-        LOGGER.warning("GROQ_API_KEY is not set; skipping AI summary.")
-        return None
-
-    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-    for attempt in range(1, 3):
-        try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                response_format={"type": "json_object"},
-                temperature=0.2,
-            )
-            return response.choices[0].message.content
-
-        except Exception as exc:  # pragma: no cover - SDK errors vary
-            LOGGER.warning("Groq attempt %s failed: %s", attempt, exc)
-            if attempt == 1:
-                time.sleep(1)
-
-    return None
-
-
-def get_default_model() -> str:
-    """Read the model name at runtime so .env can override it."""
-
-    return os.getenv("GROQ_MODEL", DEFAULT_MODEL)
-
-
-def has_groq_api_key() -> bool:
-    """Return True only when GROQ_API_KEY looks intentionally configured."""
-
-    api_key = os.getenv("GROQ_API_KEY", "").strip()
-    return bool(api_key and api_key != "replace_with_your_groq_api_key")
-
-
-def load_env_file(path: str | Path | None = None) -> None:
-    """Load simple KEY=VALUE pairs from a local .env file.
-
-    This tiny loader avoids adding another dependency just for beginner setup.
-    Existing environment variables are not overwritten.
-    """
-
-    env_path = Path(path) if path is not None else _PROJECT_ROOT / ".env"
-    if not env_path.exists():
-        return
-
-    try:
-        lines = env_path.read_text(encoding="utf-8").splitlines()
-    except OSError as exc:
-        LOGGER.warning("Could not read .env file %s: %s", env_path, exc)
-        return
-
-    for line in lines:
-        clean_line = line.strip()
-        if not clean_line or clean_line.startswith("#") or "=" not in clean_line:
-            continue
-        key, value = clean_line.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
-            os.environ[key] = value
-
-
-def parse_json_object(raw_text: str) -> dict[str, Any] | None:
-    """Parse a JSON object from a model response."""
-
-    try:
-        parsed = json.loads(raw_text)
-    except json.JSONDecodeError:
-        match = re.search(r"\{.*\}", raw_text, flags=re.DOTALL)
-        if not match:
-            return None
-        try:
-            parsed = json.loads(match.group(0))
-        except json.JSONDecodeError:
-            return None
-
-    return parsed if isinstance(parsed, dict) else None
 
 
 def _normalize_obfuscated_emails(text: str) -> str:
@@ -600,7 +565,6 @@ def main() -> None:
     args = parser.parse_args()
 
     configure_logging()
-    load_env_file()
     profile_all(args.input, args.output)
 
 

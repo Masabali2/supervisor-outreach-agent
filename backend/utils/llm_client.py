@@ -4,10 +4,18 @@ Get a free key at https://console.groq.com/keys and set:
     export GROQ_API_KEY="your_key_here"
 """
 import json
+import re
+import time
+
 from groq import Groq
 from backend.config import GROQ_API_KEY, GROQ_MODEL
 
 _client = None
+
+# How many times to retry a rate-limited (429) Groq call before giving up.
+_MAX_RETRIES = 3
+# Fallback wait if Groq's error message doesn't include a specific delay.
+_DEFAULT_BACKOFF_SECONDS = 5.0
 
 
 def _get_client() -> Groq:
@@ -22,6 +30,25 @@ def _get_client() -> Groq:
             timeout=45.0,
         )
     return _client
+
+
+def _is_rate_limit_error(exc: Exception) -> bool:
+    """True for Groq 429 (tokens/requests-per-minute) errors."""
+    status_code = getattr(exc, "status_code", None)
+    if status_code == 429:
+        return True
+    return "429" in str(exc) or "rate_limit_exceeded" in str(exc)
+
+
+def _extract_retry_delay_seconds(exc: Exception) -> float:
+    """
+    Groq's 429 message usually includes e.g. "Please try again in 11.72s".
+    Parse that out so we wait just long enough instead of guessing.
+    """
+    match = re.search(r"try again in (\d+(?:\.\d+)?)s", str(exc))
+    if match:
+        return float(match.group(1)) + 0.5  # small safety margin
+    return _DEFAULT_BACKOFF_SECONDS
 
 
 def _parse_json(text: str) -> dict | list:
@@ -70,17 +97,32 @@ def _parse_json(text: str) -> dict | list:
 
 
 def llm_chat(system_prompt: str, user_prompt: str, temperature: float = 0.4) -> str:
-    """Plain text completion."""
+    """Plain text completion. Retries automatically on Groq 429 rate limits."""
     client = _get_client()
-    resp = client.chat.completions.create(
-        model=GROQ_MODEL,
-        temperature=temperature,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-    )
-    return resp.choices[0].message.content.strip()
+    last_error: Exception | None = None
+
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            resp = client.chat.completions.create(
+                model=GROQ_MODEL,
+                temperature=temperature,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            )
+            return resp.choices[0].message.content.strip()
+        except Exception as exc:
+            last_error = exc
+            if not _is_rate_limit_error(exc) or attempt == _MAX_RETRIES:
+                raise
+            delay = _extract_retry_delay_seconds(exc)
+            print(f"[llm_client] Groq rate limit hit (attempt {attempt}/{_MAX_RETRIES}); retrying in {delay:.1f}s")
+            time.sleep(delay)
+
+    # Unreachable in practice (loop always returns or raises), but keeps
+    # type-checkers happy and guards against future edits to the loop.
+    raise last_error  # type: ignore[misc]
 
 
 def llm_json(system_prompt: str, user_prompt: str, temperature: float = 0.1) -> dict | list:
