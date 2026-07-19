@@ -66,11 +66,18 @@ def _profile_text(profile: Mapping[str, Any]) -> str:
     preferred_keys = (
         "field", "research_field", "research_interests", "interests",
         "skills", "experience", "research_background", "background",
-        "degree", "education", "projects", "keywords",
+        "education", "projects", "keywords",
     )
     parts = [_as_text(profile.get(key)) for key in preferred_keys]
     # Retain custom profile fields as well; teams often extend this file.
-    parts.extend(_as_text(value) for key, value in profile.items() if key not in preferred_keys)
+    non_research_keys = {
+        "country", "region", "degree", "name", "email", "university",
+    }
+    parts.extend(
+        _as_text(value)
+        for key, value in profile.items()
+        if key not in preferred_keys and key not in non_research_keys
+    )
     return " ".join(part for part in parts if part)
 
 
@@ -271,7 +278,7 @@ def rank_faculty(
     *,
     use_llm: bool = True,
     api_key: str | None = None,
-    model: str = DEFAULT_MODEL,
+    model: str | None = None,
 ) -> list[dict[str, Any]]:
     """Return ranked supervisors, using Groq where configured and available."""
     if load_dotenv is not None:
@@ -279,9 +286,10 @@ def rank_faculty(
         load_dotenv(project_root / ".env")
     results = rank_with_rules(faculty_members, profile)
     resolved_key = api_key or os.getenv("GROQ_API_KEY")
+    resolved_model = model or os.getenv("GROQ_MODEL", DEFAULT_MODEL)
     if use_llm and resolved_key and results:
-        LOGGER.info("Refining %d rankings with Groq model %s", len(results), model)
-        return _refine_with_groq(results, profile, resolved_key, model)
+        LOGGER.info("Refining %d rankings with Groq model %s", len(results), resolved_model)
+        return _refine_with_groq(results, profile, resolved_key, resolved_model)
     if use_llm and not resolved_key:
         LOGGER.info("GROQ_API_KEY was not found; using offline rule-based ranking.")
     return results
@@ -315,6 +323,7 @@ def run_ranking(
     output_path: str | Path,
     *,
     use_llm: bool = True,
+    model: str | None = None,
 ) -> list[dict[str, Any]]:
     """Run Stage 3 from JSON files and save ``ranked_faculty.json``."""
     faculty_data = _read_json(Path(faculty_path))
@@ -323,7 +332,7 @@ def run_ranking(
         raise ValueError("faculty.json must contain a JSON array.")
     if not isinstance(profile_data, Mapping):
         raise ValueError("my_profile.json must contain a JSON object.")
-    ranked = rank_faculty(faculty_data, profile_data, use_llm=use_llm)
+    ranked = rank_faculty(faculty_data, profile_data, use_llm=use_llm, model=model)
     _write_json_atomically(Path(output_path), ranked)
     LOGGER.info("Ranked %d faculty members into %s", len(ranked), output_path)
     return ranked
@@ -336,11 +345,12 @@ def main() -> None:
     parser.add_argument("--faculty", type=Path, default=root / "data" / "faculty.json")
     parser.add_argument("--profile", type=Path, default=root / "data" / "my_profile.json")
     parser.add_argument("--output", type=Path, default=root / "data" / "ranked_faculty.json")
+    parser.add_argument("--model", help="Override GROQ_MODEL for this run.")
     parser.add_argument("--offline", action="store_true", help="Skip optional Groq refinement.")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     try:
-        run_ranking(args.faculty, args.profile, args.output, use_llm=not args.offline)
+        run_ranking(args.faculty, args.profile, args.output, use_llm=not args.offline, model=args.model)
     except ValueError as error:
         LOGGER.error("Ranking failed: %s", error)
         raise SystemExit(1) from error

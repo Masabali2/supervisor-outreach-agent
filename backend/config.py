@@ -8,7 +8,7 @@ ROOT_DIR = BASE_DIR.parent                           # supervisor-agent/ folder
 load_dotenv(dotenv_path=ROOT_DIR / ".env")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 COUNTRY = os.getenv("COUNTRY", "Canada")
 PRIORITY_REGION = os.getenv("PRIORITY_REGION", "")
 FIELD = os.getenv("FIELD", "Artificial Intelligence")

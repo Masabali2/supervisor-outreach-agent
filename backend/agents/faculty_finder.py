@@ -1,5 +1,5 @@
 ﻿"""
-Stage 1 â€” Faculty Discovery Agent
+Stage 1 — Faculty Discovery Agent
 Given a university, finds professors working in the target field, and tries
 to detect signals that they are actively accepting graduate students.
 """
@@ -19,10 +19,10 @@ def _normalize_profile_url(profile_url: str, university_homepage: str) -> tuple[
     Cleans up the LLM-extracted profile_url. Returns (clean_url, extracted_email).
 
     Handles two common issues seen in raw output:
-    1. Relative URLs like "/people/Salimur/Choudhury" (missing the domain) â€”
+    1. Relative URLs like "/people/Salimur/Choudhury" (missing the domain) —
        these get resolved against the university's homepage into a full URL.
     2. "mailto:someone@school.edu" links that the LLM mistakenly put in
-       profile_url instead of an email field â€” these get extracted out as an
+       profile_url instead of an email field — these get extracted out as an
        email and profile_url is cleared (since it isn't actually a profile page).
     """
     if not profile_url or not isinstance(profile_url, str):
@@ -38,7 +38,7 @@ def _normalize_profile_url(profile_url: str, university_homepage: str) -> tuple[
 
     parsed = urlparse(profile_url)
     if not parsed.scheme or not parsed.netloc:
-        # Doesn't look like a usable URL at all (e.g. leftover junk text) â€” drop it
+        # Doesn't look like a usable URL at all (e.g. leftover junk text) — drop it
         return "", ""
 
     return profile_url, ""
@@ -49,7 +49,7 @@ def _is_clean_text(text: str, min_printable_ratio: float = 0.85) -> bool:
     Detects garbled/binary content that slipped through as 'text' (e.g. a PDF,
     a compressed file, or a corrupted download that got decoded as if it were
     plain text). Returns False if too much of the content is non-printable
-    junk â€” this is what prevents corrupted scraped pages from poisoning the
+    junk — this is what prevents corrupted scraped pages from poisoning the
     LLM prompt and causing the whole university's extraction to fail.
     """
     if not text:
@@ -82,24 +82,68 @@ def _is_plausible_person_name(name: str) -> bool:
     return all(word[0].isupper() for word in words if word[0].isalpha())
 
 
-def _is_individual_profile_url(profile_url: str, university_homepage: str) -> bool:
-    """Require an individual-looking university profile URL, not a directory."""
-    normalized_url, _ = _normalize_profile_url(profile_url, university_homepage)
+# Known aggregator / directory / social / listing sites that occasionally get
+# scraped or hallucinated as "profile" pages but are never an individual's
+# own page. If a candidate's URL lands on one of these, we clear the URL —
+# we do NOT drop the candidate, since the professor themselves may still be
+# real even though the extracted link was junk.
+_NON_PROFILE_DOMAINS = {
+    "wikipedia.org", "scribd.com", "ratemyprofessors.com", "zoominfo.com",
+    "signalhire.com", "academica.ca", "universityaffairs.ca", "philpeople.org",
+    "linkedin.com", "facebook.com", "twitter.com", "x.com", "bsky.app",
+    "instagram.com", "glassdoor.com", "indeed.com", "prabook.com", "crunchbase.com",
+}
+
+# Path fragments that indicate a directory/listing page rather than an
+# individual's own profile page.
+_DIRECTORY_PATH_MARKERS = (
+    "directory", "faculty-profiles", "faculty-profile-list",
+    "research-area", "research-areas", "audience/faculty", "our-faculty",
+)
+
+# Path's last segment being exactly one of these generic labels also signals
+# a listing page (e.g. ".../people/faculty") rather than one person's page.
+_DIRECTORY_LAST_SEGMENTS = {
+    "faculty", "people", "person", "profiles", "profile",
+    "staff", "members", "member", "bio",
+}
+
+
+def _resolve_profile_url(profile_url: str, university_homepage: str) -> tuple[str, str]:
+    """
+    Validates a candidate's profile_url WITHOUT ever using it as a reason to
+    drop the professor. Returns (clean_url, extracted_email):
+
+      - If profile_url is empty/unusable: returns ("", "") — this is fine,
+        not an error. A real professor with no discoverable URL still gets
+        kept; later stages can look their page up separately if needed.
+      - If profile_url points to a known aggregator/directory/social site,
+        or to a directory-style path (e.g. "/faculty-directory"), the URL is
+        cleared (kept as "") since it isn't a usable individual page — but
+        again, the candidate itself is NOT rejected.
+      - Off-university-domain personal sites (personal .net/.com domains,
+        GitHub Pages, lab subdomains, etc.) are now accepted as-is. A
+        domain mismatch with the university's homepage is no longer treated
+        as invalid, since professors very often list personal pages that
+        live off the university's domain.
+      - Otherwise the normalized URL is returned unchanged.
+    """
+    normalized_url, extracted_email = _normalize_profile_url(profile_url, university_homepage)
     if not normalized_url:
-        return False
-    university_host = urlparse(university_homepage).netloc.casefold().removeprefix("www.")
+        return "", extracted_email
+
     profile_host = urlparse(normalized_url).netloc.casefold().removeprefix("www.")
-    if university_host and profile_host != university_host and not profile_host.endswith(f".{university_host}"):
-        return False
+    if any(profile_host == bad or profile_host.endswith(f".{bad}") for bad in _NON_PROFILE_DOMAINS):
+        return "", extracted_email
+
     parts = [part.casefold() for part in urlparse(normalized_url).path.split("/") if part]
-    if not parts:
-        return False
     path = "/".join(parts)
-    if any(marker in path for marker in ("directory", "faculty-profiles", "faculty-profile-list", "research-area", "research-areas", "audience/faculty", "our-faculty")):
-        return False
-    if parts[-1] in {"faculty", "people", "person", "profiles", "profile", "staff", "members", "member", "bio"}:
-        return False
-    return any(marker in part for part in parts for marker in ("people", "person", "faculty", "profile", "staff", "member", "bio")) or parts[-1].startswith("~")
+    if any(marker in path for marker in _DIRECTORY_PATH_MARKERS):
+        return "", extracted_email
+    if parts and parts[-1] in _DIRECTORY_LAST_SEGMENTS:
+        return "", extracted_email
+
+    return normalized_url, extracted_email
 
 
 def _snippet_looks_like_collection(snippet: object) -> bool:
@@ -112,26 +156,53 @@ def _snippet_looks_like_collection(snippet: object) -> bool:
 
 
 def _filter_faculty_candidates(faculty: list[dict], university: dict) -> list[dict]:
-    """Normalize LLM output and keep only credible individual faculty profiles."""
+    """
+    Normalize LLM output and keep every credible individual professor.
+
+    A candidate is ONLY rejected if:
+      1. Their name doesn't look like a plausible person's name (e.g. it's
+         actually a department/role/directory label), or
+      2. Their research_snippet clearly describes a listing/collection page
+         rather than one specific person.
+
+    A missing profile_url, or a profile_url on a domain different from the
+    university's own site, is NOT a rejection reason — real professors are
+    kept either way. Only known junk/directory URLs get cleared (see
+    _resolve_profile_url), never the whole candidate.
+    """
     university_name = str(university.get("name", "")).strip()
     homepage = str(university.get("homepage", "") or university.get("homepage_guess", "")).strip()
     valid_faculty: list[dict] = []
     seen_urls: set[str] = set()
+    seen_names: set[str] = set()
     for candidate in faculty:
         if not isinstance(candidate, dict):
             continue
         name = _clean_professor_name(candidate.get("name"))
         profile_url = str(candidate.get("profile_url") or "").strip()
         snippet = str(candidate.get("research_snippet") or "").strip()
-        clean_url, extracted_email = _normalize_profile_url(profile_url, homepage)
-        if not _is_plausible_person_name(name) or not _is_individual_profile_url(clean_url, homepage):
+
+        if not _is_plausible_person_name(name):
             continue
         if _snippet_looks_like_collection(snippet):
             continue
-        canonical_url = clean_url.rstrip("/").casefold()
-        if canonical_url in seen_urls:
-            continue
-        seen_urls.add(canonical_url)
+
+        clean_url, extracted_email = _resolve_profile_url(profile_url, homepage)
+
+        # Dedupe: prefer matching on URL when we have one; otherwise fall
+        # back to name+university so the same no-URL professor isn't added
+        # twice, without needing a URL to identify them.
+        if clean_url:
+            canonical_url = clean_url.rstrip("/").casefold()
+            if canonical_url in seen_urls:
+                continue
+            seen_urls.add(canonical_url)
+        else:
+            canonical_name = f"{name.casefold()}|{university_name.casefold()}"
+            if canonical_name in seen_names:
+                continue
+            seen_names.add(canonical_name)
+
         normalized = dict(candidate)
         normalized.update({"name": name, "profile_url": clean_url, "research_snippet": snippet, "university": university_name, "accepting_students_signal": candidate.get("accepting_students_signal", "unclear")})
         if extracted_email:
@@ -229,7 +300,7 @@ Each object must contain EXACTLY these keys (no other keys, no different names):
 - "name": professor's full name
 - "profile_url": their personal/lab page URL if found in the text, else ""
 - "research_snippet": 1-2 sentences on what they research, based on the text
-- "accepting_students_signal": true/false/"unclear" â€” true ONLY if the text explicitly suggests they are looking for students, have open positions, or are actively recruiting
+- "accepting_students_signal": true/false/"unclear" — true ONLY if the text explicitly suggests they are looking for students, have open positions, or are actively recruiting
 """
     try:
         faculty = llm_json(system_prompt, user_prompt)
@@ -281,4 +352,3 @@ if __name__ == "__main__":
         print(f"[Error] '{input_file_path}' file nahi mili! Pehle check karein ke path sahi hai ya nahi.")
     except json.JSONDecodeError:
         print(f"[Error] '{input_file_path}' sahi JSON format mein nahi hai.")
-

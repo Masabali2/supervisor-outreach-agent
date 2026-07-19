@@ -14,7 +14,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import re
 import time
 from pathlib import Path
@@ -35,17 +34,14 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     BeautifulSoup = None  # type: ignore[assignment]
 
-try:
-    from openai import OpenAI
-except ImportError:  # pragma: no cover - optional dependency
-    OpenAI = None  # type: ignore[assignment]
+from backend.utils.llm_client import llm_json
 
 
 AcceptingSignal = Literal[True, False, "Unknown"]
 
-DEFAULT_INPUT_PATH = Path("data/faculty.json")
-DEFAULT_OUTPUT_PATH = Path("data/faculty.json")
-DEFAULT_MODEL = "gpt-5.6"
+DEFAULT_DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "faculty.json"
+DEFAULT_INPUT_PATH = DEFAULT_DATA_PATH
+DEFAULT_OUTPUT_PATH = DEFAULT_DATA_PATH
 REQUEST_TIMEOUT_SECONDS = 20
 MAX_PAGE_TEXT_CHARS = 18_000
 USER_AGENT = (
@@ -66,6 +62,10 @@ INSTITUTIONAL_EMAIL_SUFFIXES = (
 )
 
 LOGGER = logging.getLogger(__name__)
+
+SUMMARY_SYSTEM_PROMPT = """You create factual research profiles for graduate
+supervisors. Use only the supplied webpage and publication evidence. Return a
+single JSON object, with no Markdown or extra text."""
 
 
 def load_faculty(path: str | Path = DEFAULT_INPUT_PATH) -> list[dict[str, Any]]:
@@ -164,6 +164,10 @@ def profile_researcher(professor: dict[str, Any]) -> dict[str, Any]:
         research_snippet=str(enriched.get("research_snippet") or ""),
     )
     accepting_students = detect_accepting_students(page_text, summary)
+    if accepting_students == "Unknown":
+        stage_one_signal = enriched.get("accepting_students_signal")
+        if stage_one_signal in (True, False):
+            accepting_students = stage_one_signal
 
     enriched.update(
         {
@@ -320,32 +324,52 @@ def generate_profile_summary(
     webpage_text: str,
     recent_publications: list[dict[str, Any]] | None = None,
     research_snippet: str = "",
-    model: str | None = None,
 ) -> dict[str, Any]:
-    """Use GPT to create a structured professor research profile."""
+    """Use the shared Groq client to create a structured research profile."""
 
-    fallback = {
-        "profile_summary": "",
-        "research_areas": [],
-        "recent_work": [],
-    }
+    fallback = _evidence_fallback(research_snippet, recent_publications or [])
     if not webpage_text and not recent_publications and not research_snippet:
         return fallback
 
     prompt = build_summary_prompt(webpage_text, recent_publications or [], research_snippet)
-    raw_response = call_gpt_json(prompt, model=model or get_default_model())
-    if raw_response is None:
+    try:
+        parsed = llm_json(SUMMARY_SYSTEM_PROMPT, prompt, temperature=0.1)
+    except Exception as exc:
+        LOGGER.warning("Groq profile summary failed; keeping available evidence: %s", exc)
         return fallback
-
-    parsed = parse_json_object(raw_response)
-    if parsed is None:
-        LOGGER.warning("GPT returned invalid JSON for profile summary.")
+    if not isinstance(parsed, dict):
+        LOGGER.warning("Groq returned a non-object profile summary.")
         return fallback
 
     return {
         "profile_summary": str(parsed.get("profile_summary") or ""),
         "research_areas": _string_list(parsed.get("research_areas")),
         "recent_work": _string_list(parsed.get("recent_work")),
+    }
+
+
+def _evidence_fallback(
+    research_snippet: str, recent_publications: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Keep Stage 2 useful if Groq is unavailable without inventing details."""
+
+    clean_snippet = _normalize_whitespace(research_snippet)
+    publication_titles = [
+        str(publication.get("title")).strip()
+        for publication in recent_publications
+        if isinstance(publication, dict) and publication.get("title")
+    ]
+    if clean_snippet:
+        summary = clean_snippet[:700]
+    elif publication_titles:
+        summary = "Recent publication evidence was found, but no profile-page summary was available."
+    else:
+        summary = "No reliable research-profile evidence was available."
+
+    return {
+        "profile_summary": summary,
+        "research_areas": [],
+        "recent_work": publication_titles[:3],
     }
 
 
@@ -387,7 +411,7 @@ def build_summary_prompt(
     recent_publications: list[dict[str, Any]],
     research_snippet: str,
 ) -> str:
-    """Create the GPT prompt separately so it is easy to test."""
+    """Create the Groq prompt separately so it is easy to test."""
 
     publications_json = json.dumps(recent_publications, ensure_ascii=False, indent=2)
     clipped_text = webpage_text[:MAX_PAGE_TEXT_CHARS]
@@ -416,91 +440,6 @@ Recent publications:
 Professor webpage text:
 {clipped_text}
 """.strip()
-
-
-def call_gpt_json(prompt: str, model: str = DEFAULT_MODEL) -> str | None:
-    """Call GPT and return the raw text response."""
-
-    if OpenAI is None:
-        LOGGER.warning("OpenAI package is not installed; skipping GPT summary.")
-        return None
-    if not has_openai_api_key():
-        LOGGER.warning("OPENAI_API_KEY is not set; skipping GPT summary.")
-        return None
-
-    client = OpenAI()
-    for attempt in range(1, 3):
-        try:
-            response = client.responses.create(
-                model=model,
-                input=prompt,
-                text={"format": {"type": "json_object"}},
-            )
-            return response.output_text
-        except Exception as exc:  # pragma: no cover - SDK errors vary
-            LOGGER.warning("GPT attempt %s failed: %s", attempt, exc)
-            if attempt == 1:
-                time.sleep(1)
-
-    return None
-
-
-def get_default_model() -> str:
-    """Read the model name at runtime so .env can override it."""
-
-    return os.getenv("OPENAI_MODEL", DEFAULT_MODEL)
-
-
-def has_openai_api_key() -> bool:
-    """Return True only when OPENAI_API_KEY looks intentionally configured."""
-
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
-    return bool(api_key and api_key != "replace_with_your_openai_api_key")
-
-
-def load_env_file(path: str | Path = ".env") -> None:
-    """Load simple KEY=VALUE pairs from a local .env file.
-
-    This tiny loader avoids adding another dependency just for beginner setup.
-    Existing environment variables are not overwritten.
-    """
-
-    env_path = Path(path)
-    if not env_path.exists():
-        return
-
-    try:
-        lines = env_path.read_text(encoding="utf-8").splitlines()
-    except OSError as exc:
-        LOGGER.warning("Could not read .env file %s: %s", env_path, exc)
-        return
-
-    for line in lines:
-        clean_line = line.strip()
-        if not clean_line or clean_line.startswith("#") or "=" not in clean_line:
-            continue
-        key, value = clean_line.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
-            os.environ[key] = value
-
-
-def parse_json_object(raw_text: str) -> dict[str, Any] | None:
-    """Parse a JSON object from a model response."""
-
-    try:
-        parsed = json.loads(raw_text)
-    except json.JSONDecodeError:
-        match = re.search(r"\{.*\}", raw_text, flags=re.DOTALL)
-        if not match:
-            return None
-        try:
-            parsed = json.loads(match.group(0))
-        except json.JSONDecodeError:
-            return None
-
-    return parsed if isinstance(parsed, dict) else None
 
 
 def _normalize_obfuscated_emails(text: str) -> str:
@@ -550,7 +489,6 @@ def main() -> None:
     args = parser.parse_args()
 
     configure_logging()
-    load_env_file()
     profile_all(args.input, args.output)
 
 

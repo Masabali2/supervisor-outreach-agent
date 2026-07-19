@@ -1,107 +1,133 @@
 [
   {
-    "name": "John Duchi",
-    "profile_url": "http://web.stanford.edu/~jduchi/",
-    "research_snippet": "John Duchi's work spans statistical learning, optimization, information theory, and computation, with goals including discovering statistical learning procedures and building efficient large-scale optimization methods.",
+    "name": "Michael Bowling",
+    "profile_url": "https://www.amii.ca/",
+    "research_snippet": "Research in artificial intelligence, machine learning, and game playing.",
+    "accepting_students_signal": true,
+    "university": "University of Alberta",
+    "email": "Lynda.Vang@Amii.ca",
+    "publications": [],
+    "profile_summary": "Researches artificial intelligence, machine learning, and game playing, with a focus on advancing the field of AI for good and for all.",
+    "research_areas": [
+      "Artificial Intelligence",
+      "Machine Learning",
+      "Game Playing"
+    ],
+    "recent_work": [],
+    "accepting_students": true,
+    "profiled": true,
+    "profile_source_url": "https://www.amii.ca/"
+  },
+  {
+    "name": "Maryam Mofrad",
+    "profile_url": "",
+    "research_snippet": "Research interests are in predictive analysis, machine learning and decision-making under uncertainty, particularly in healthcare.",
     "accepting_students_signal": "unclear",
-    "university": "Stanford University",
+    "university": "University of Alberta",
     "email": null,
     "publications": [],
-    "profile_summary": "",
-    "research_areas": [],
+    "profile_summary": "Professor's research focuses on predictive analysis, machine learning, and decision-making under uncertainty, particularly in healthcare.",
+    "research_areas": [
+      "Predictive Analysis",
+      "Machine Learning",
+      "Decision-Making Under Uncertainty"
+    ],
     "recent_work": [],
     "accepting_students": "Unknown",
     "profiled": true,
-    "profile_source_url": "http://web.stanford.edu/~jduchi/"
+    "profile_source_url": null,
+    "profile_warning": "Could not extract professor page text."
   },
   {
-    "name": "Pieter Abbeel",
-    "profile_url": "https://www2.eecs.berkeley.edu/Faculty/Homepages/abbeel.html",
-    "research_snippet": "Pieter Abbeel's research interests include Artificial Intelligence (AI) and Control, Intelligent Systems, and Robotics (CIR).",
+    "name": "Otman Basir",
+    "profile_url": "https://uwaterloo.ca/electrical-computer-engineering/profile/obasir",
+    "research_snippet": "Intelligent Embedded Systems, Sensory Systems Design, Biologically Inspired Intelligent Systems, and Human-Computer Interface (HCI) Systems",
     "accepting_students_signal": "unclear",
-    "university": "University of California, Berkeley",
-    "email": "bgreenwood@berkeley.edu",
+    "university": "University of Waterloo",
+    "email": "obasir@uwaterloo.ca",
     "publications": [],
-    "profile_summary": "",
-    "research_areas": [],
-    "recent_work": [],
+    "profile_summary": "Professor Otman Basir is a researcher in Intelligent Embedded Systems, Sensory Systems Design, Biologically Inspired Intelligent Systems, and Human-Computer Interface (HCI) Systems at the University of Waterloo.",
+    "research_areas": [
+      "Intelligent Embedded Systems",
+      "Sensory Systems Design",
+      "Biologically Inspired Intelligent Systems",
+      "Human-Computer Interface (HCI) Systems"
+    ],
+    "recent_work": [
+      "Knowledgebase approximation using association rule aggregation",
+      "Distributed Spectrum Sharing Using Blockchain: A Hyperledger Fabric Implementation",
+      "Decentralized Identifiers and Verifiable Credentials for Smartphone Anticounterfeiting and Decentralized IMEI Database",
+      "Capability-based non-fungible tokens approach for a decentralized AAA framework in IoT",
+      "Smart Phone Anti-counterfeiting System Using a Decentralized Identity Management Framework",
+      "A Dempster-Shafer Sensor Fusion Approach for Traffic Incident Detection and Localization",
+      "A distributed sensor management for large-scale IoT indoor acoustic surveillance",
+      "Identity management in iot networks using blockchain and smart contracts",
+      "A Game Theoretic Solution for the Territory Sharing Problem in Social Taxi Networks",
+      "A Bargaining-Based Solution to the Team Mobility Planning Game"
+    ],
     "accepting_students": "Unknown",
     "profiled": true,
-    "profile_source_url": "https://www2.eecs.berkeley.edu/Faculty/Homepages/abbeel.html"
+    "profile_source_url": "https://uwaterloo.ca/electrical-computer-engineering/profile/obasir"
   },
   {
-    "name": "Jitendra Malik",
-    "profile_url": "http://www.cs.berkeley.edu/~malik/",
-    "research_snippet": "Jitendra Malik is a Professor and Chair, but his specific research interests are not mentioned in the provided text.",
+    "name": "Shai Ben-David",
+    "profile_url": "https://cs.uwaterloo.ca/~shai/",
+    "research_snippet": "machine learning theory, logic, the theory of distributed computation and complexity theory",
     "accepting_students_signal": "unclear",
-    "university": "University of California, Berkeley",
-    "email": "malik@berkeley.edu",
-    "publications": [],
-    "profile_summary": "",
-    "research_areas": [],
-    "recent_work": [],
-    "accepting_students": "Unknown",
-    "profiled": true,
-    "profile_source_url": "http://www.cs.berkeley.edu/~malik/"
-  },
-  {
-    "name": "Ahmed Alaa",
-    "profile_url": "https://www2.eecs.berkeley.edu/Faculty/Homepages/amalaa.html",
-    "research_snippet": "No specific research interests are mentioned for Ahmed Alaa in the provided text.",
-    "accepting_students_signal": "unclear",
-    "university": "University of California, Berkeley",
-    "email": "amalaa@berkeley.edu",
-    "publications": [],
-    "profile_summary": "",
-    "research_areas": [],
-    "recent_work": [],
-    "accepting_students": "Unknown",
-    "profiled": true,
-    "profile_source_url": "https://www2.eecs.berkeley.edu/Faculty/Homepages/amalaa.html"
-  },
-  {
-    "name": "Behcet Acikmese",
-    "profile_url": "https://www2.eecs.berkeley.edu/Faculty/Homepages/bechet.html",
-    "research_snippet": "Behcet Acikmese's research interests include Control, Intelligent Systems, and Robotics (CIR).",
-    "accepting_students_signal": "unclear",
-    "university": "University of California, Berkeley",
+    "university": "University of Waterloo",
     "email": null,
     "publications": [],
-    "profile_summary": "",
-    "research_areas": [],
+    "profile_summary": "Shai Ben-David is a professor at the University of Waterloo, with a background in physics, mathematics, and psychology, and a PhD in set theory. His research interests include machine learning, logic, and the theory of distributed computation and complexity theory. He aims to provide mathematical formulation and understanding of real world problems.",
+    "research_areas": [
+      "machine learning",
+      "logic",
+      "theory of distributed computation",
+      "complexity theory"
+    ],
     "recent_work": [],
     "accepting_students": "Unknown",
     "profiled": true,
-    "profile_source_url": "https://www2.eecs.berkeley.edu/Faculty/Homepages/bechet.html"
+    "profile_source_url": "https://cs.uwaterloo.ca/~shai/"
   },
   {
-    "name": "Michael Jordan",
-    "profile_url": "http://www.cs.berkeley.edu/~jordan/",
-    "research_snippet": "Michael Jordan's research interests include Artificial Intelligence (AI), but more specific details are not provided in the text.",
+    "name": "Maura Grossman",
+    "profile_url": "http://grossman.uwaterloo.ca/",
+    "research_snippet": "eDiscovery",
     "accepting_students_signal": "unclear",
-    "university": "University of California, Berkeley",
-    "email": "jordan@cs.berkeley.edu",
+    "university": "University of Waterloo",
+    "email": "maura.grossman@uwaterloo.ca",
     "publications": [],
-    "profile_summary": "",
-    "research_areas": [],
-    "recent_work": [],
+    "profile_summary": "Maura R. Grossman is a Research Professor in the David R. Cheriton School of Computer Science at the University of Waterloo, with a focus on trustworthy evaluation and use of artificial intelligence in law and healthcare.",
+    "research_areas": [
+      "Artificial Intelligence",
+      "Law",
+      "Healthcare"
+    ],
+    "recent_work": [
+      "Developing and validating CAL for high-recall information retrieval and technology-assisted review",
+      "Helping courts address deepfakes, AI-generated evidence, authentication, and responsible judicial use of AI"
+    ],
     "accepting_students": "Unknown",
     "profiled": true,
-    "profile_source_url": "http://www.cs.berkeley.edu/~jordan/"
+    "profile_source_url": "http://grossman.uwaterloo.ca/"
   },
   {
-    "name": "Navid Amini",
-    "profile_url": "https://www.calstatela.edu/faculty/navid-amini",
-    "research_snippet": "Machine Learning and Mobile Computing",
+    "name": "Jimmy Lin",
+    "profile_url": "https://cs.uwaterloo.ca/~jimmylin/",
+    "research_snippet": "data in AI tools, integrating diverse data sources in chemical informatics",
     "accepting_students_signal": "unclear",
-    "university": "California State University, Los Angeles",
+    "university": "University of Waterloo",
     "email": null,
     "publications": [],
-    "profile_summary": "",
-    "research_areas": [],
+    "profile_summary": "Professor and David R. Cheriton Chair in Computer Science at the University of Waterloo, with research interests in information retrieval, natural language processing, and data management.",
+    "research_areas": [
+      "information retrieval",
+      "natural language processing",
+      "data management"
+    ],
     "recent_work": [],
     "accepting_students": "Unknown",
     "profiled": true,
-    "profile_source_url": "https://www.calstatela.edu/faculty/navid-amini"
+    "profile_source_url": "https://cs.uwaterloo.ca/~jimmylin/"
   }
 ]
