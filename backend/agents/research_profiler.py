@@ -36,22 +36,31 @@ except ImportError:  # pragma: no cover - optional dependency
     BeautifulSoup = None  # type: ignore[assignment]
 
 try:
-    from openai import OpenAI
+    from groq import Groq
 except ImportError:  # pragma: no cover - optional dependency
-    OpenAI = None  # type: ignore[assignment]
+    Groq = None  # type: ignore[assignment]
 
 
 AcceptingSignal = Literal[True, False, "Unknown"]
 
-DEFAULT_INPUT_PATH = Path("data/faculty.json")
-DEFAULT_OUTPUT_PATH = Path("data/faculty.json")
-DEFAULT_MODEL = "gpt-5.6"
+# Anchored to backend/data/faculty.json regardless of the current working
+# directory, mirroring how ranker.py resolves its own default paths.
+_BACKEND_ROOT = Path(__file__).resolve().parents[1]
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_INPUT_PATH = _BACKEND_ROOT / "data" / "faculty.json"
+DEFAULT_OUTPUT_PATH = _BACKEND_ROOT / "data" / "faculty.json"
+DEFAULT_MODEL = "llama-3.1-8b-instant"
 REQUEST_TIMEOUT_SECONDS = 20
 MAX_PAGE_TEXT_CHARS = 18_000
 USER_AGENT = (
     "Mozilla/5.0 (compatible; SupervisorOutreachAgent/1.0; "
     "+https://example.com/hackathon)"
 )
+# Semantic Scholar's public (unauthenticated) API rate-limits aggressively
+# when called back-to-back for many professors in a row. Spacing requests
+# out and retrying once on a 429 avoids silently losing publication data.
+SEMANTIC_SCHOLAR_MIN_INTERVAL_SECONDS = 3.0
+_last_semantic_scholar_call_time = 0.0
 
 INSTITUTIONAL_EMAIL_SUFFIXES = (
     ".edu",
@@ -263,6 +272,54 @@ def extract_email(text: str) -> str | None:
     return unique_matches[0] if unique_matches else None
 
 
+def _fetch_semantic_scholar(
+    params: dict[str, Any], professor_name: str
+) -> dict[str, Any] | None:
+    """Call the Semantic Scholar search API, paced to avoid 429 responses.
+
+    Waits at least SEMANTIC_SCHOLAR_MIN_INTERVAL_SECONDS since the previous
+    call before sending a new one, and retries once (respecting a
+    Retry-After header if present) if the first attempt is rate-limited.
+    """
+
+    global _last_semantic_scholar_call_time
+
+    for attempt in range(1, 3):
+        elapsed = time.monotonic() - _last_semantic_scholar_call_time
+        wait_needed = SEMANTIC_SCHOLAR_MIN_INTERVAL_SECONDS - elapsed
+        if wait_needed > 0:
+            time.sleep(wait_needed)
+
+        try:
+            response = requests.get(
+                "https://api.semanticscholar.org/graph/v1/paper/search",
+                params=params,
+                headers={"User-Agent": USER_AGENT},
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+            _last_semantic_scholar_call_time = time.monotonic()
+
+            if response.status_code == 429 and attempt == 1:
+                retry_after = response.headers.get("Retry-After")
+                delay = float(retry_after) if retry_after else SEMANTIC_SCHOLAR_MIN_INTERVAL_SECONDS * 2
+                LOGGER.info(
+                    "Semantic Scholar rate-limited %s; retrying in %.1fs.",
+                    professor_name,
+                    delay,
+                )
+                time.sleep(delay)
+                continue
+
+            response.raise_for_status()
+            return response.json()
+        except (requests.RequestException, ValueError) as exc:
+            _last_semantic_scholar_call_time = time.monotonic()
+            LOGGER.warning("Could not fetch publications for %s: %s", professor_name, exc)
+            return None
+
+    return None
+
+
 def find_recent_publications(
     professor_name: str,
     research_field: str = "",
@@ -271,8 +328,8 @@ def find_recent_publications(
     """Find up to three recent publications without inventing missing data.
 
     The function uses the Semantic Scholar public graph API when requests is
-    available. On failure, it returns an empty list so GPT can summarize only
-    the page evidence.
+    available. On failure, it returns an empty list so the LLM can summarize
+    only the page evidence.
     """
 
     if not professor_name or requests is None:
@@ -287,17 +344,8 @@ def find_recent_publications(
         "fields": "title,year,url,venue",
     }
 
-    try:
-        response = requests.get(
-            "https://api.semanticscholar.org/graph/v1/paper/search",
-            params=params,
-            headers={"User-Agent": USER_AGENT},
-            timeout=REQUEST_TIMEOUT_SECONDS,
-        )
-        response.raise_for_status()
-        payload = response.json()
-    except (requests.RequestException, ValueError) as exc:
-        LOGGER.warning("Could not fetch publications for %s: %s", professor_name, exc)
+    payload = _fetch_semantic_scholar(params, professor_name)
+    if payload is None:
         return []
 
     publications: list[dict[str, Any]] = []
@@ -322,7 +370,7 @@ def generate_profile_summary(
     research_snippet: str = "",
     model: str | None = None,
 ) -> dict[str, Any]:
-    """Use GPT to create a structured professor research profile."""
+    """Use Groq (LLaMA) to create a structured professor research profile."""
 
     fallback = {
         "profile_summary": "",
@@ -333,13 +381,13 @@ def generate_profile_summary(
         return fallback
 
     prompt = build_summary_prompt(webpage_text, recent_publications or [], research_snippet)
-    raw_response = call_gpt_json(prompt, model=model or get_default_model())
+    raw_response = call_groq_json(prompt, model=model or get_default_model())
     if raw_response is None:
         return fallback
 
     parsed = parse_json_object(raw_response)
     if parsed is None:
-        LOGGER.warning("GPT returned invalid JSON for profile summary.")
+        LOGGER.warning("Groq returned invalid JSON for profile summary.")
         return fallback
 
     return {
@@ -387,7 +435,7 @@ def build_summary_prompt(
     recent_publications: list[dict[str, Any]],
     research_snippet: str,
 ) -> str:
-    """Create the GPT prompt separately so it is easy to test."""
+    """Create the LLM prompt separately so it is easy to test."""
 
     publications_json = json.dumps(recent_publications, ensure_ascii=False, indent=2)
     clipped_text = webpage_text[:MAX_PAGE_TEXT_CHARS]
@@ -418,27 +466,29 @@ Professor webpage text:
 """.strip()
 
 
-def call_gpt_json(prompt: str, model: str = DEFAULT_MODEL) -> str | None:
-    """Call GPT and return the raw text response."""
+def call_groq_json(prompt: str, model: str = DEFAULT_MODEL) -> str | None:
+    """Call the Groq chat completions API and return the raw text response."""
 
-    if OpenAI is None:
-        LOGGER.warning("OpenAI package is not installed; skipping GPT summary.")
+    if Groq is None:
+        LOGGER.warning("groq package is not installed; skipping AI summary.")
         return None
-    if not has_openai_api_key():
-        LOGGER.warning("OPENAI_API_KEY is not set; skipping GPT summary.")
+    if not has_groq_api_key():
+        LOGGER.warning("GROQ_API_KEY is not set; skipping AI summary.")
         return None
 
-    client = OpenAI()
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     for attempt in range(1, 3):
         try:
-            response = client.responses.create(
+            response = client.chat.completions.create(
                 model=model,
-                input=prompt,
-                text={"format": {"type": "json_object"}},
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"},
+                temperature=0.2,
             )
-            return response.output_text
+            return response.choices[0].message.content
+
         except Exception as exc:  # pragma: no cover - SDK errors vary
-            LOGGER.warning("GPT attempt %s failed: %s", attempt, exc)
+            LOGGER.warning("Groq attempt %s failed: %s", attempt, exc)
             if attempt == 1:
                 time.sleep(1)
 
@@ -448,24 +498,24 @@ def call_gpt_json(prompt: str, model: str = DEFAULT_MODEL) -> str | None:
 def get_default_model() -> str:
     """Read the model name at runtime so .env can override it."""
 
-    return os.getenv("OPENAI_MODEL", DEFAULT_MODEL)
+    return os.getenv("GROQ_MODEL", DEFAULT_MODEL)
 
 
-def has_openai_api_key() -> bool:
-    """Return True only when OPENAI_API_KEY looks intentionally configured."""
+def has_groq_api_key() -> bool:
+    """Return True only when GROQ_API_KEY looks intentionally configured."""
 
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
-    return bool(api_key and api_key != "replace_with_your_openai_api_key")
+    api_key = os.getenv("GROQ_API_KEY", "").strip()
+    return bool(api_key and api_key != "replace_with_your_groq_api_key")
 
 
-def load_env_file(path: str | Path = ".env") -> None:
+def load_env_file(path: str | Path | None = None) -> None:
     """Load simple KEY=VALUE pairs from a local .env file.
 
     This tiny loader avoids adding another dependency just for beginner setup.
     Existing environment variables are not overwritten.
     """
 
-    env_path = Path(path)
+    env_path = Path(path) if path is not None else _PROJECT_ROOT / ".env"
     if not env_path.exists():
         return
 
