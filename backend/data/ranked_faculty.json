@@ -1,0 +1,72 @@
+[
+  {
+    "name": "Pieter Abbeel",
+    "university": "University of California, Berkeley",
+    "email": "bgreenwood@berkeley.edu",
+    "fit_score": 8.0,
+    "fit_reasoning": "Pieter Abbeel is at University of California, Berkeley which is in the same region as the student, increasing research alignment and accessibility.",
+    "profile_summary": "",
+    "recent_work": [],
+    "accepting_students": false
+  },
+  {
+    "name": "Jitendra Malik",
+    "university": "University of California, Berkeley",
+    "email": "malik@berkeley.edu",
+    "fit_score": 8.0,
+    "fit_reasoning": "Jitendra Malik is at University of California, Berkeley which is in the same region as the student, increasing research alignment and accessibility.",
+    "profile_summary": "",
+    "recent_work": [],
+    "accepting_students": false
+  },
+  {
+    "name": "Ahmed Alaa",
+    "university": "University of California, Berkeley",
+    "email": "amalaa@berkeley.edu",
+    "fit_score": 8.0,
+    "fit_reasoning": "Ahmed Alaa is at University of California, Berkeley which is in the same region as the student, increasing research alignment and accessibility.",
+    "profile_summary": "",
+    "recent_work": [],
+    "accepting_students": false
+  },
+  {
+    "name": "Behcet Acikmese",
+    "university": "University of California, Berkeley",
+    "email": "",
+    "fit_score": 8.0,
+    "fit_reasoning": "Behcet Acikmese is at University of California, Berkeley which is in the same region as the student, increasing research alignment and accessibility.",
+    "profile_summary": "",
+    "recent_work": [],
+    "accepting_students": false
+  },
+  {
+    "name": "Michael Jordan",
+    "university": "University of California, Berkeley",
+    "email": "jordan@cs.berkeley.edu",
+    "fit_score": 8.0,
+    "fit_reasoning": "Michael Jordan is at University of California, Berkeley which is in the same region as the student, increasing research alignment and accessibility.",
+    "profile_summary": "",
+    "recent_work": [],
+    "accepting_students": false
+  },
+  {
+    "name": "John Duchi",
+    "university": "Stanford University",
+    "email": "",
+    "fit_score": 7.0,
+    "fit_reasoning": "John Duchi is at Stanford University which is in the same region as the student, but no specific research alignment information is available.",
+    "profile_summary": "",
+    "recent_work": [],
+    "accepting_students": false
+  },
+  {
+    "name": "Navid Amini",
+    "university": "California State University, Los Angeles",
+    "email": "",
+    "fit_score": 6.0,
+    "fit_reasoning": "Navid Amini is at California State University, Los Angeles which is in the same region as the student, but no specific research alignment information is available and the university may have different research focus.",
+    "profile_summary": "",
+    "recent_work": [],
+    "accepting_students": false
+  }
+]

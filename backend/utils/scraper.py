@@ -35,37 +35,28 @@ def fetch_page_text(url: str, timeout: int = 15) -> str:
         if url.lower().endswith(".pdf"):
             return fetch_pdf_text(url, timeout=timeout)
 
-        downloaded = trafilatura.fetch_url(url)
+        resp = requests.get(
+            url,
+            headers=HEADERS,
+            timeout=(5, 10),   # 5 seconds to connect, 10 seconds to read
+        )
 
-        if not downloaded:
+        resp.raise_for_status()
 
-            logger.debug(
-                "Trafilatura fetch failed, falling back to requests: %s",
+        content_type = resp.headers.get(
+            "Content-Type",
+            "",
+        ).lower()
+
+        if "html" not in content_type:
+            logger.warning(
+                "Skipping non-HTML page: %s (%s)",
                 url,
+                content_type,
             )
+            return ""
 
-            resp = requests.get(
-                url,
-                headers=HEADERS,
-                timeout=timeout,
-            )
-
-            resp.raise_for_status()
-
-            content_type = resp.headers.get(
-                "Content-Type",
-                "",
-            ).lower()
-
-            if "html" not in content_type:
-                logger.warning(
-                    "Skipping non-HTML page: %s (%s)",
-                    url,
-                    content_type,
-                )
-                return ""
-
-            downloaded = resp.text
+        downloaded = resp.text
 
         text = trafilatura.extract(
             downloaded,

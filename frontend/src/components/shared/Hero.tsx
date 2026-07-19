@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 
@@ -15,6 +15,19 @@ export default function Hero() {
   const [isVisible, setIsVisible] = useState(false);
   const heroRef = useRef<HTMLElement>(null);
   const mouseGlowRef = useRef<HTMLDivElement>(null);
+
+  const submitSearch = async (formData: { country: string; region?: string; degree: "Masters" | "PhD"; researchField: string }) => {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000"}/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ country: formData.country, region: formData.region ?? "", degree: formData.degree, field: formData.researchField }),
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.detail ?? "The search could not be completed.");
+    }
+    window.location.assign("/results");
+  };
 
   useEffect(() => {
     const animationFrame = window.requestAnimationFrame(() => setIsVisible(true));
@@ -160,7 +173,7 @@ export default function Hero() {
             }`}
           >
             <div className="rounded-[2rem] border border-white/80 bg-white/35 p-1.5 shadow-[0_30px_90px_-34px_rgba(79,70,229,0.35)] backdrop-blur-xl sm:p-2">
-              <SearchForm />
+              <SearchForm onSubmit={submitSearch} />
             </div>
           </div>
         </div>
@@ -280,3 +293,5 @@ export default function Hero() {
     </section>
   );
 }
+
+

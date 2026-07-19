@@ -1,11 +1,12 @@
-"""
-Stage 1 — Faculty Discovery Agent
+﻿"""
+Stage 1 â€” Faculty Discovery Agent
 Given a university, finds professors working in the target field, and tries
 to detect signals that they are actively accepting graduate students.
 """
 import json
 import os
 import time
+import re
 from urllib.parse import urljoin, urlparse
 from backend.utils.search import search_web
 from backend.utils.scraper import fetch_page_text
@@ -18,10 +19,10 @@ def _normalize_profile_url(profile_url: str, university_homepage: str) -> tuple[
     Cleans up the LLM-extracted profile_url. Returns (clean_url, extracted_email).
 
     Handles two common issues seen in raw output:
-    1. Relative URLs like "/people/Salimur/Choudhury" (missing the domain) —
+    1. Relative URLs like "/people/Salimur/Choudhury" (missing the domain) â€”
        these get resolved against the university's homepage into a full URL.
     2. "mailto:someone@school.edu" links that the LLM mistakenly put in
-       profile_url instead of an email field — these get extracted out as an
+       profile_url instead of an email field â€” these get extracted out as an
        email and profile_url is cleared (since it isn't actually a profile page).
     """
     if not profile_url or not isinstance(profile_url, str):
@@ -37,7 +38,7 @@ def _normalize_profile_url(profile_url: str, university_homepage: str) -> tuple[
 
     parsed = urlparse(profile_url)
     if not parsed.scheme or not parsed.netloc:
-        # Doesn't look like a usable URL at all (e.g. leftover junk text) — drop it
+        # Doesn't look like a usable URL at all (e.g. leftover junk text) â€” drop it
         return "", ""
 
     return profile_url, ""
@@ -48,7 +49,7 @@ def _is_clean_text(text: str, min_printable_ratio: float = 0.85) -> bool:
     Detects garbled/binary content that slipped through as 'text' (e.g. a PDF,
     a compressed file, or a corrupted download that got decoded as if it were
     plain text). Returns False if too much of the content is non-printable
-    junk — this is what prevents corrupted scraped pages from poisoning the
+    junk â€” this is what prevents corrupted scraped pages from poisoning the
     LLM prompt and causing the whole university's extraction to fail.
     """
     if not text:
@@ -57,6 +58,86 @@ def _is_clean_text(text: str, min_printable_ratio: float = 0.85) -> bool:
     printable = sum(1 for ch in sample if ch.isprintable() or ch in "\n\t\r")
     ratio = printable / len(sample)
     return ratio >= min_printable_ratio
+
+
+def _clean_professor_name(name: object) -> str:
+    """Remove common academic titles and credentials from an LLM candidate."""
+    if not isinstance(name, str):
+        return ""
+    cleaned = re.sub(r"^\s*(?:dr\.?|prof\.?|professor)\s+", "", name, flags=re.I)
+    cleaned = re.sub(r",?\s*(?:ph\.?d\.?|phd|m\.?sc\.?|msc|m\.?eng\.?|meng|d\.?phil\.?)\s*$", "", cleaned, flags=re.I)
+    return re.sub(r"\s+", " ", cleaned).strip(" ,.;")
+
+
+def _is_plausible_person_name(name: str) -> bool:
+    """Reject directory labels, roles, research areas, and malformed names."""
+    words = name.split()
+    rejected_terms = {"administration", "admissions", "ai", "artificial", "centre", "center", "college", "computer", "department", "directory", "faculty", "graduate", "group", "intelligence", "lab", "laboratory", "member", "members", "people", "person", "profile", "program", "research", "role", "school", "science", "staff", "team", "university"}
+    if not 2 <= len(words) <= 5:
+        return False
+    if any(word.casefold().strip(".,") in rejected_terms for word in words):
+        return False
+    if any(not re.fullmatch(r"[A-Za-z?-??-??-?'.-]+", word) for word in words):
+        return False
+    return all(word[0].isupper() for word in words if word[0].isalpha())
+
+
+def _is_individual_profile_url(profile_url: str, university_homepage: str) -> bool:
+    """Require an individual-looking university profile URL, not a directory."""
+    normalized_url, _ = _normalize_profile_url(profile_url, university_homepage)
+    if not normalized_url:
+        return False
+    university_host = urlparse(university_homepage).netloc.casefold().removeprefix("www.")
+    profile_host = urlparse(normalized_url).netloc.casefold().removeprefix("www.")
+    if university_host and profile_host != university_host and not profile_host.endswith(f".{university_host}"):
+        return False
+    parts = [part.casefold() for part in urlparse(normalized_url).path.split("/") if part]
+    if not parts:
+        return False
+    path = "/".join(parts)
+    if any(marker in path for marker in ("directory", "faculty-profiles", "faculty-profile-list", "research-area", "research-areas", "audience/faculty", "our-faculty")):
+        return False
+    if parts[-1] in {"faculty", "people", "person", "profiles", "profile", "staff", "members", "member", "bio"}:
+        return False
+    return any(marker in part for part in parts for marker in ("people", "person", "faculty", "profile", "staff", "member", "bio")) or parts[-1].startswith("~")
+
+
+def _snippet_looks_like_collection(snippet: object) -> bool:
+    """Identify snippets describing aggregate pages rather than one person."""
+    if not isinstance(snippet, str):
+        return False
+    normalized = re.sub(r"\s+", " ", snippet).casefold()
+    phrases = ("faculty profiles", "faculty directory", "meet our faculty", "our faculty", "research area", "research areas", "browse faculty", "list of faculty", "administrative staff", "staff directory")
+    return any(phrase in normalized for phrase in phrases)
+
+
+def _filter_faculty_candidates(faculty: list[dict], university: dict) -> list[dict]:
+    """Normalize LLM output and keep only credible individual faculty profiles."""
+    university_name = str(university.get("name", "")).strip()
+    homepage = str(university.get("homepage", "") or university.get("homepage_guess", "")).strip()
+    valid_faculty: list[dict] = []
+    seen_urls: set[str] = set()
+    for candidate in faculty:
+        if not isinstance(candidate, dict):
+            continue
+        name = _clean_professor_name(candidate.get("name"))
+        profile_url = str(candidate.get("profile_url") or "").strip()
+        snippet = str(candidate.get("research_snippet") or "").strip()
+        clean_url, extracted_email = _normalize_profile_url(profile_url, homepage)
+        if not _is_plausible_person_name(name) or not _is_individual_profile_url(clean_url, homepage):
+            continue
+        if _snippet_looks_like_collection(snippet):
+            continue
+        canonical_url = clean_url.rstrip("/").casefold()
+        if canonical_url in seen_urls:
+            continue
+        seen_urls.add(canonical_url)
+        normalized = dict(candidate)
+        normalized.update({"name": name, "profile_url": clean_url, "research_snippet": snippet, "university": university_name, "accepting_students_signal": candidate.get("accepting_students_signal", "unclear")})
+        if extracted_email:
+            normalized["email"] = extracted_email
+        valid_faculty.append(normalized)
+    return valid_faculty
 
 
 def _find_faculty_directory(university_name: str, field: str) -> list[dict]:
@@ -148,7 +229,7 @@ Each object must contain EXACTLY these keys (no other keys, no different names):
 - "name": professor's full name
 - "profile_url": their personal/lab page URL if found in the text, else ""
 - "research_snippet": 1-2 sentences on what they research, based on the text
-- "accepting_students_signal": true/false/"unclear" — true ONLY if the text explicitly suggests they are looking for students, have open positions, or are actively recruiting
+- "accepting_students_signal": true/false/"unclear" â€” true ONLY if the text explicitly suggests they are looking for students, have open positions, or are actively recruiting
 """
     try:
         faculty = llm_json(system_prompt, user_prompt)
@@ -157,34 +238,10 @@ Each object must contain EXACTLY these keys (no other keys, no different names):
             print(f"[faculty_finder] LLM did not return a valid list for {university_name}")
             return []
 
-        # Schema validation: only keep entries that actually match what we asked
-        # for. This is what stops one bad/garbled source from taking down the
-        # entire university's results with a single malformed LLM response
-        # (e.g. the LLM echoing back some unrelated JSON it found in scraped
-        # content instead of following the requested schema).
-        valid_faculty = [
-            f for f in faculty
-            if isinstance(f, dict) and isinstance(f.get("name"), str) and f["name"].strip()
-        ]
+        valid_faculty = _filter_faculty_candidates(faculty, university)
         dropped = len(faculty) - len(valid_faculty)
         if dropped > 0:
-            print(f"[faculty_finder] dropped {dropped} malformed/mismatched-schema entries for {university_name}")
-
-        # Normalize: make sure every kept entry has all expected keys, even if
-        # the LLM omitted one — downstream stages assume these keys exist.
-        university_homepage = university.get("homepage", "") or university.get("homepage_guess", "")
-        for f in valid_faculty:
-            f.setdefault("profile_url", "")
-            f.setdefault("research_snippet", "")
-            f.setdefault("accepting_students_signal", "unclear")
-            f["university"] = university_name
-
-            # Clean up the profile_url: fix relative paths, pull out mailto: links
-            clean_url, extracted_email = _normalize_profile_url(f["profile_url"], university_homepage)
-            f["profile_url"] = clean_url
-            if extracted_email:
-                f["email"] = extracted_email
-
+            print(f"[faculty_finder] dropped {dropped} invalid, non-profile, or directory candidate(s) for {university_name}")
         return valid_faculty
 
     except Exception as e:
@@ -224,3 +281,4 @@ if __name__ == "__main__":
         print(f"[Error] '{input_file_path}' file nahi mili! Pehle check karein ke path sahi hai ya nahi.")
     except json.JSONDecodeError:
         print(f"[Error] '{input_file_path}' sahi JSON format mein nahi hai.")
+
