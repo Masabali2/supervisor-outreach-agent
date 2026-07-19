@@ -1,34 +1,21 @@
 [
   {
-    "name": "Michael Bowling",
+    "name": "Adam White",
     "university": "University of Alberta",
-    "email": "Lynda.Vang@Amii.ca",
-    "fit_score": 8.7,
-    "fit_reasoning": "Research overlap with the student's profile: artificial, intelligence. The profile indicates the supervisor may be accepting students.",
-    "profile_summary": "Researches artificial intelligence, machine learning, and game playing, with a focus on advancing the field of AI for good and for all.",
+    "email": "",
+    "fit_score": 4.2,
+    "fit_reasoning": "Research overlap with the student's profile: artificial.",
+    "profile_summary": "Director of Alberta Machine Intelligence Institute (Amii) with expertise in Artificial Intelligence research.",
     "recent_work": [],
-    "accepting_students": true
-  },
-  {
-    "name": "Maura Grossman",
-    "university": "University of Waterloo",
-    "email": "maura.grossman@uwaterloo.ca",
-    "fit_score": 8.1,
-    "fit_reasoning": "Research overlap with the student's profile: artificial, intelligence.",
-    "profile_summary": "Maura R. Grossman is a Research Professor in the David R. Cheriton School of Computer Science at the University of Waterloo, with a focus on trustworthy evaluation and use of artificial intelligence in law and healthcare.",
-    "recent_work": [
-      "Developing and validating CAL for high-recall information retrieval and technology-assisted review",
-      "Helping courts address deepfakes, AI-generated evidence, authentication, and responsible judicial use of AI"
-    ],
     "accepting_students": false
   },
   {
-    "name": "Maryam Mofrad",
-    "university": "University of Alberta",
+    "name": "Victor Zhong",
+    "university": "University of Waterloo",
     "email": "",
-    "fit_score": 0.0,
-    "fit_reasoning": "Limited explicit research overlap was found for Artificial intelligence.",
-    "profile_summary": "Professor's research focuses on predictive analysis, machine learning, and decision-making under uncertainty, particularly in healthcare.",
+    "fit_score": 4.1,
+    "fit_reasoning": "Research overlap with the student's profile: artificial.",
+    "profile_summary": "Professor's research focuses on developing an intelligent research assistant for natural science R&D.",
     "recent_work": [],
     "accepting_students": false
   },
@@ -37,7 +24,7 @@
     "university": "University of Waterloo",
     "email": "obasir@uwaterloo.ca",
     "fit_score": 0.0,
-    "fit_reasoning": "Limited explicit research overlap was found for Artificial intelligence.",
+    "fit_reasoning": "Limited explicit research overlap was found for Artificial intelligencee.",
     "profile_summary": "Professor Otman Basir is a researcher in Intelligent Embedded Systems, Sensory Systems Design, Biologically Inspired Intelligent Systems, and Human-Computer Interface (HCI) Systems at the University of Waterloo.",
     "recent_work": [
       "Knowledgebase approximation using association rule aggregation",
@@ -54,22 +41,52 @@
     "accepting_students": false
   },
   {
+    "name": "Jimmy Lin",
+    "university": "University of Waterloo",
+    "email": "",
+    "fit_score": 0.0,
+    "fit_reasoning": "Limited explicit research overlap was found for Artificial intelligencee.",
+    "profile_summary": "Professor and David R. Cheriton Chair in the David R. Cheriton School of Computer Science at the University of Waterloo, with research interests in information retrieval, natural language processing, and data management.",
+    "recent_work": [],
+    "accepting_students": false
+  },
+  {
     "name": "Shai Ben-David",
     "university": "University of Waterloo",
     "email": "",
     "fit_score": 0.0,
-    "fit_reasoning": "Limited explicit research overlap was found for Artificial intelligence.",
+    "fit_reasoning": "Limited explicit research overlap was found for Artificial intelligencee.",
     "profile_summary": "Shai Ben-David is a professor at the University of Waterloo, with a background in physics, mathematics, and psychology, and a PhD in set theory. His research interests include machine learning, logic, and the theory of distributed computation and complexity theory. He aims to provide mathematical formulation and understanding of real world problems.",
     "recent_work": [],
     "accepting_students": false
   },
   {
-    "name": "Jimmy Lin",
-    "university": "University of Waterloo",
+    "name": "Richard Sutton",
+    "university": "University of Alberta",
     "email": "",
     "fit_score": 0.0,
-    "fit_reasoning": "Limited explicit research overlap was found for Artificial intelligence.",
-    "profile_summary": "Professor and David R. Cheriton Chair in Computer Science at the University of Waterloo, with research interests in information retrieval, natural language processing, and data management.",
+    "fit_reasoning": "Limited explicit research overlap was found for Artificial intelligencee.",
+    "profile_summary": "Recipient of the 2024 A.M. Turing Award for contributions to reinforcement learning.",
+    "recent_work": [],
+    "accepting_students": false
+  },
+  {
+    "name": "Pierre Boulanger",
+    "university": "University of Alberta",
+    "email": "",
+    "fit_score": 0.0,
+    "fit_reasoning": "Limited explicit research overlap was found for Artificial intelligencee.",
+    "profile_summary": "Professor's research focuses on Advanced Man-Machine Interfaces (AMMI).",
+    "recent_work": [],
+    "accepting_students": false
+  },
+  {
+    "name": "Kumar Punithakumar",
+    "university": "University of Alberta",
+    "email": "",
+    "fit_score": 0.0,
+    "fit_reasoning": "Limited explicit research overlap was found for Artificial intelligencee.",
+    "profile_summary": "Professor's research focuses on Advanced Man-Machine Interfaces (AMMI).",
     "recent_work": [],
     "accepting_students": false
   }

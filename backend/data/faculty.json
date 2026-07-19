@@ -1,44 +1,5 @@
 [
   {
-    "name": "Michael Bowling",
-    "profile_url": "https://www.amii.ca/",
-    "research_snippet": "Research in artificial intelligence, machine learning, and game playing.",
-    "accepting_students_signal": true,
-    "university": "University of Alberta",
-    "email": "Lynda.Vang@Amii.ca",
-    "publications": [],
-    "profile_summary": "Researches artificial intelligence, machine learning, and game playing, with a focus on advancing the field of AI for good and for all.",
-    "research_areas": [
-      "Artificial Intelligence",
-      "Machine Learning",
-      "Game Playing"
-    ],
-    "recent_work": [],
-    "accepting_students": true,
-    "profiled": true,
-    "profile_source_url": "https://www.amii.ca/"
-  },
-  {
-    "name": "Maryam Mofrad",
-    "profile_url": "",
-    "research_snippet": "Research interests are in predictive analysis, machine learning and decision-making under uncertainty, particularly in healthcare.",
-    "accepting_students_signal": "unclear",
-    "university": "University of Alberta",
-    "email": null,
-    "publications": [],
-    "profile_summary": "Professor's research focuses on predictive analysis, machine learning, and decision-making under uncertainty, particularly in healthcare.",
-    "research_areas": [
-      "Predictive Analysis",
-      "Machine Learning",
-      "Decision-Making Under Uncertainty"
-    ],
-    "recent_work": [],
-    "accepting_students": "Unknown",
-    "profiled": true,
-    "profile_source_url": null,
-    "profile_warning": "Could not extract professor page text."
-  },
-  {
     "name": "Otman Basir",
     "profile_url": "https://uwaterloo.ca/electrical-computer-engineering/profile/obasir",
     "research_snippet": "Intelligent Embedded Systems, Sensory Systems Design, Biologically Inspired Intelligent Systems, and Human-Computer Interface (HCI) Systems",
@@ -70,6 +31,44 @@
     "profile_source_url": "https://uwaterloo.ca/electrical-computer-engineering/profile/obasir"
   },
   {
+    "name": "Jimmy Lin",
+    "profile_url": "https://cs.uwaterloo.ca/~jimmylin/",
+    "research_snippet": "scalable retrieval infrastructure to enable efficient processing of the large, complex datasets involved in industrial R&D",
+    "accepting_students_signal": "unclear",
+    "university": "University of Waterloo",
+    "email": null,
+    "publications": [],
+    "profile_summary": "Professor and David R. Cheriton Chair in the David R. Cheriton School of Computer Science at the University of Waterloo, with research interests in information retrieval, natural language processing, and data management.",
+    "research_areas": [
+      "information retrieval",
+      "natural language processing",
+      "data management"
+    ],
+    "recent_work": [],
+    "accepting_students": "Unknown",
+    "profiled": true,
+    "profile_source_url": "https://cs.uwaterloo.ca/~jimmylin/"
+  },
+  {
+    "name": "Victor Zhong",
+    "profile_url": "",
+    "research_snippet": "Deep Research Agents for Natural Science R&D, developing an end-to-end intelligent research assistant capable of retrieving, reasoning over, and acting on diverse experimental data sources",
+    "accepting_students_signal": "unclear",
+    "university": "University of Waterloo",
+    "email": null,
+    "publications": [],
+    "profile_summary": "Professor's research focuses on developing an intelligent research assistant for natural science R&D.",
+    "research_areas": [
+      "Natural Science",
+      "Artificial Intelligence"
+    ],
+    "recent_work": [],
+    "accepting_students": "Unknown",
+    "profiled": true,
+    "profile_source_url": null,
+    "profile_warning": "Could not extract professor page text."
+  },
+  {
     "name": "Shai Ben-David",
     "profile_url": "https://cs.uwaterloo.ca/~shai/",
     "research_snippet": "machine learning theory, logic, the theory of distributed computation and complexity theory",
@@ -81,8 +80,7 @@
     "research_areas": [
       "machine learning",
       "logic",
-      "theory of distributed computation",
-      "complexity theory"
+      "distributed computation and complexity theory"
     ],
     "recent_work": [],
     "accepting_students": "Unknown",
@@ -90,44 +88,75 @@
     "profile_source_url": "https://cs.uwaterloo.ca/~shai/"
   },
   {
-    "name": "Maura Grossman",
-    "profile_url": "http://grossman.uwaterloo.ca/",
-    "research_snippet": "eDiscovery",
+    "name": "Richard Sutton",
+    "profile_url": "",
+    "research_snippet": "co-recipient of the 2024 A.M. Turing Award for his work as one of the founders of reinforcement learning",
     "accepting_students_signal": "unclear",
-    "university": "University of Waterloo",
-    "email": "maura.grossman@uwaterloo.ca",
-    "publications": [],
-    "profile_summary": "Maura R. Grossman is a Research Professor in the David R. Cheriton School of Computer Science at the University of Waterloo, with a focus on trustworthy evaluation and use of artificial intelligence in law and healthcare.",
-    "research_areas": [
-      "Artificial Intelligence",
-      "Law",
-      "Healthcare"
-    ],
-    "recent_work": [
-      "Developing and validating CAL for high-recall information retrieval and technology-assisted review",
-      "Helping courts address deepfakes, AI-generated evidence, authentication, and responsible judicial use of AI"
-    ],
-    "accepting_students": "Unknown",
-    "profiled": true,
-    "profile_source_url": "http://grossman.uwaterloo.ca/"
-  },
-  {
-    "name": "Jimmy Lin",
-    "profile_url": "https://cs.uwaterloo.ca/~jimmylin/",
-    "research_snippet": "data in AI tools, integrating diverse data sources in chemical informatics",
-    "accepting_students_signal": "unclear",
-    "university": "University of Waterloo",
+    "university": "University of Alberta",
     "email": null,
     "publications": [],
-    "profile_summary": "Professor and David R. Cheriton Chair in Computer Science at the University of Waterloo, with research interests in information retrieval, natural language processing, and data management.",
+    "profile_summary": "Recipient of the 2024 A.M. Turing Award for contributions to reinforcement learning.",
     "research_areas": [
-      "information retrieval",
-      "natural language processing",
-      "data management"
+      "Reinforcement Learning"
     ],
     "recent_work": [],
     "accepting_students": "Unknown",
     "profiled": true,
-    "profile_source_url": "https://cs.uwaterloo.ca/~jimmylin/"
+    "profile_source_url": null,
+    "profile_warning": "Could not extract professor page text."
+  },
+  {
+    "name": "Pierre Boulanger",
+    "profile_url": "",
+    "research_snippet": "Advanced Man-Machine Interfaces (AMMI) research",
+    "accepting_students_signal": "unclear",
+    "university": "University of Alberta",
+    "email": null,
+    "publications": [],
+    "profile_summary": "Professor's research focuses on Advanced Man-Machine Interfaces (AMMI).",
+    "research_areas": [
+      "Advanced Man-Machine Interfaces"
+    ],
+    "recent_work": [],
+    "accepting_students": "Unknown",
+    "profiled": true,
+    "profile_source_url": null,
+    "profile_warning": "Could not extract professor page text."
+  },
+  {
+    "name": "Adam White",
+    "profile_url": "",
+    "research_snippet": "Artificial Intelligence research, Director of Alberta Machine Intelligence Institute (Amii)",
+    "accepting_students_signal": "unclear",
+    "university": "University of Alberta",
+    "email": null,
+    "publications": [],
+    "profile_summary": "Director of Alberta Machine Intelligence Institute (Amii) with expertise in Artificial Intelligence research.",
+    "research_areas": [
+      "Artificial Intelligence"
+    ],
+    "recent_work": [],
+    "accepting_students": "Unknown",
+    "profiled": true,
+    "profile_source_url": null,
+    "profile_warning": "Could not extract professor page text."
+  },
+  {
+    "name": "Kumar Punithakumar",
+    "profile_url": "",
+    "research_snippet": "Advanced Man-Machine Interfaces (AMMI) research",
+    "accepting_students_signal": "unclear",
+    "university": "University of Alberta",
+    "email": null,
+    "publications": [],
+    "profile_summary": "Professor's research focuses on Advanced Man-Machine Interfaces (AMMI).",
+    "research_areas": [
+      "Advanced Man-Machine Interfaces"
+    ],
+    "recent_work": [],
+    "accepting_students": "Unknown",
+    "profiled": true,
+    "profile_source_url": null,
+    "profile_warning": "Could not extract professor page text."
   }
 ]

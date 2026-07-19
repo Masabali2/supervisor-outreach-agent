@@ -5,13 +5,13 @@
     "reason": "Strong artificial-intelligence research and graduate programs."
   },
   {
-    "name": "University of Alberta",
-    "homepage": "https://www.ualberta.ca",
-    "reason": "Top-ranked in AI research and academic reputation."
-  },
-  {
     "name": "University of Waterloo",
     "homepage": "https://uwaterloo.ca",
-    "reason": "Strong programs in artificial intelligence and machine learning."
+    "reason": "Home to the Waterloo Data and Artificial Intelligence Institute."
+  },
+  {
+    "name": "University of Alberta",
+    "homepage": "https://www.ualberta.ca",
+    "reason": "Ranked as the top university in Canada and 53rd globally for artificial intelligence."
   }
 ]

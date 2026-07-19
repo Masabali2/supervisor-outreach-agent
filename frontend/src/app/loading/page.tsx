@@ -36,7 +36,6 @@ export default function LoadingPage() {
   const [requestError, setRequestError] = useState("");
   const [isComplete, setIsComplete] = useState(false);
 
-  // 🛠️ FIX: Initialized pipeline analytics state to forward stats to LoadingCards component
   const [pipelineData, setPipelineData] = useState({
     universities: 0,
     faculty: 0,
@@ -106,7 +105,6 @@ export default function LoadingPage() {
                 throw new Error(payload.error);
               }
 
-              // 🛠️ FIX: Live stream state capture mechanism to pipe metrics into state fields
               if (payload.universities !== undefined || payload.faculty !== undefined || payload.ranked !== undefined) {
                 setPipelineData((prev) => ({
                   ...prev,
@@ -155,41 +153,45 @@ export default function LoadingPage() {
     };
   }, [progressPayload]);
 
-  return (
-    <main className="relative min-h-screen overflow-hidden bg-background px-4 py-12 text-foreground sm:px-6 lg:px-12">
+ return (
+    <main className="relative min-h-screen overflow-hidden bg-background px-4 py-4 text-foreground sm:px-6 lg:px-12">
+      {/* Background elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-16 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/5 dark:bg-primary/10 blur-3xl animate-spin-slow" />
         <div className="absolute -bottom-16 right-16 h-80 w-80 rounded-full bg-indigo-500/5 dark:bg-indigo-500/10 blur-3xl animate-spin-reverse-slow" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_var(--muted),_transparent_40%)] opacity-40" />
       </div>
 
-      <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-12">
-        <section className="relative z-10 overflow-hidden rounded-[2rem] border border-border bg-card p-8 shadow-sm backdrop-blur-md sm:p-10 lg:p-12">
-          <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
-            <div className="space-y-8 text-center lg:text-left">
-              <div className="inline-flex items-center justify-center rounded-2xl border border-border bg-muted/60 px-4 py-4 shadow-sm">
-                <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-background border border-border">
-                  <svg className="relative h-6 w-6 text-muted-foreground animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v3m0 12v3m9-9h-3M6 12H3m15.364-6.364l-2.121 2.121M8.757 15.243l-2.122 2.121M18.364 18.364l-2.121-2.121M8.757 8.757L6.636 6.636" />
-                  </svg>
+      <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-6">
+
+        {/* 🛠️ UPDATED: Glowing blue border and shadow */}
+        <section className="relative z-10 overflow-hidden rounded-[2rem] border-2 border-purple-500 bg-white px-5 py-3 shadow-[0_0_30px_rgba(168,85,247,0.2)]">
+          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] items-center justify-items-end w-full">
+
+            {/* LEFT SIDE: Content */}
+            <div className="space-y-2 text-center lg:text-left w-full">
+              {/* 🛠️ UPDATED: Multi-color spinning icon */}
+              <div className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-1.5 shadow-sm">
+                <div className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-slate-200">
+                  <div className="h-4 w-4 rounded-full border-2 border-transparent border-t-blue-500 border-r-purple-500 border-b-pink-500 border-l-amber-500 animate-spin" />
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <p className="text-xs font-bold uppercase tracking-[0.25em] text-muted-foreground">
+              {/* Headings */}
+              <div className="space-y-0.5">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
                   Supervisor Outreach Agent Pipeline
                 </p>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                <h1 className="text-xl font-bold tracking-tight text-black sm:text-2xl">
                   Finding Your Perfect Research Supervisor
                 </h1>
-                <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                <p className="max-w-xl text-xs leading-normal text-slate-500">
                   Real-time synchronization active. Progress updates stream directly from executing agent kernels.
                 </p>
 
                 {requestError && (
-                  <div className="rounded-xl border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+                  <div className="rounded-lg border border-red-500 bg-red-50 p-2 text-xs text-red-600 mt-1">
                     <p className="font-medium">{requestError}</p>
-                    <button type="button" className="mt-3 font-semibold text-foreground underline hover:opacity-80" onClick={() => router.replace("/")}>
+                    <button type="button" className="mt-1 font-semibold text-black underline hover:opacity-80" onClick={() => router.replace("/")}>
                       Return to search
                     </button>
                   </div>
@@ -197,14 +199,17 @@ export default function LoadingPage() {
               </div>
             </div>
 
-            <div className="space-y-6">
+            {/* RIGHT SIDE: Live Status */}
+            <div className="w-full max-w-2xl lg:pl-4">
               <TypingStatus />
             </div>
+
           </div>
         </section>
 
-        <div className="relative z-10 grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="space-y-8">
+        {/* Bottom Dashboard Grid Layout */}
+        <div className="relative z-10 grid gap-6 xl:grid-cols-[1.1fr_0.9fr] items-start">
+          <div className="space-y-4">
             <ProgressBar
               progress={progressState.progress}
               statusMessage={progressState.status}
@@ -222,7 +227,6 @@ export default function LoadingPage() {
           />
         </div>
       </div>
-
       <style jsx global>{`
         @keyframes spin-slow {
           from { transform: rotate(0deg); }
